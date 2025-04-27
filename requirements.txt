@@ -1,0 +1,5 @@
+themoviedb
+requests
+tqdm
+python-Levenshtein
+yt_dlp

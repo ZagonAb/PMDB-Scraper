@@ -1,0 +1,29 @@
+{
+    "api_key": "YOUR_TMDB_API_KEY",
+    "ruta_peliculas": "ROUTE/WHERE/ARE/YOUR/MOVIES",
+    "idiomas": ["en-US"],
+    "metadata_language": "en-US",
+    "interface_language": "en-US",
+    "exportar_formato": "json",
+    "obtener_datos": {
+        "titulo": true,
+        "año": false,
+        "duracion": true,
+        "director": true,
+        "productora": true,
+        "rating": true,
+        "descripcion": true,
+        "generos": true,
+        "poster": true,
+        "backdrop": true,
+        "logo": true,
+        "fecha_lanzamiento": true,
+        "trailer": false
+    },
+    "calidad_trailer": "480p",
+    "trailer_lenguaje": ["en-US"],
+    "buscar_series": false,
+    "timeout_descargas": 10,
+    "max_reintentos": 3,
+    "actualizar_manual": false
+}
