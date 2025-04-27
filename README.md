@@ -1,4 +1,4 @@
-# PMDB-S
+# PMDB-Scraper
 
 ## ✨ Scraper de Metadatos de Películas para Pegasus Frontend
 
