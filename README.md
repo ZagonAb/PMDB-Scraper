@@ -158,7 +158,7 @@ En **"idiomas":** es algo similar, en mi caso los títulos de las películas en 
     "actualizar_manual": false
 }
 ```
-- Una vez teminada la configuracion del archivo config.json
+- Una vez teminada la configuracion del archivo `config.json`
 - Ejecuta el script principal `pmdb-scraper.py`
 
 ```sh
