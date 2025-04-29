@@ -120,10 +120,10 @@ Antes de ejecutar el scraper, es importante configurar el archivo `config.json`.
 - **`actualizar_manual`**: Esta opción solo funcionará si previamente ha obtenido metadatos y desea actualizar aquellas películas que no fueron encontradas o que contienen metadatos erróneos. `actualizar_manual` en (`true`), el script le permite seleccionar manualmente la película de su archivo metadata.json para ofrecerle múltiples coincidencias y pueda actualizar los metadatos correctamente, automáticamente recreará metadata.txt
 
 **Si el tráiler no está disponible en el idioma principal configurado en `trailer_lenguaje`, buscará automáticamente en otros idiomas en el orden en que están listados.**
-- Ejemplo: `"trailer_lenguaje": ["es-MX", "en-US"],` Este es mi caso, ya que no todos los trailers siempre están en español.
+- Ejemplo: `"trailer_lenguaje": ["es-MX", "en-US"]` Este es mi caso, ya que no todos los trailers siempre están en español.
 
 **En `"idiomas":` es algo similar, en mi caso los títulos de las películas en mi colección no son 100% en español, también tengo películas en ingles con títulos en ingles así que requiero de una configuración algo mas que** `es-MX`
-- Ejemplo: **"idiomas": ["es-MX", "es-ES", "en-US"],**
+- Ejemplo: **"idiomas": ["es-MX", "es-ES", "en-US"]**
 
 # Si no quiere algunos de los datos solo cambie de true a false.
 ```json
