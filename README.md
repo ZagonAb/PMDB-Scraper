@@ -122,7 +122,7 @@ Antes de ejecutar el scraper, es importante configurar el archivo `config.json`.
 **Si el tráiler no está disponible en el idioma principal configurado en `trailer_lenguaje`, buscará automáticamente en otros idiomas en el orden en que están listados.**
 - Ejemplo: `"trailer_lenguaje": ["es-MX", "en-US"],` Este es mi caso, ya que no todos los trailers siempre están en español.
 
-**En `"idiomas":` es algo similar, en mi caso los títulos de las películas en mi colección no son 100% en español, también tengo películas en ingles con títulos en ingles así que requiero de una configuración algo mas que `es-MX` **
+**En `"idiomas":` es algo similar, en mi caso los títulos de las películas en mi colección no son 100% en español, también tengo películas en ingles con títulos en ingles así que requiero de una configuración algo mas que** `es-MX`
 - Ejemplo: **"idiomas": ["es-MX", "es-ES", "en-US"],**
 
 # Si no quiere algunos de los datos solo cambie de true a false.
