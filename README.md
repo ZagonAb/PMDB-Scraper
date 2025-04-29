@@ -2,7 +2,7 @@
 
 ## ✨ Scraper de Metadatos de Películas para Pegasus Frontend
 
-Pegasus Movie Data Base Scraper (PMDB-Scraper) es una herramienta diseñada para extraer metadatos de películas desde **The Movie Database (TMDb)** y generar archivos de metadatos compatibles con **Pegasus Frontend**. (Esta herramienta no tiene ninguna asociación oficial con Pegasus Frontend. Es un proyecto comunitario diseñado para ayudar a quienes desean integrar su colección de películas en su sistema de juego.)
+Pegasus Movie Data Base Scraper (PMDB-Scraper) es una herramienta diseñada para extraer metadatos de películas desde **The Movie Database (TMDB)** y generar archivos de metadatos compatibles con **Pegasus Frontend**. (Esta herramienta no tiene ninguna asociación oficial con Pegasus Frontend. Es un proyecto comunitario diseñado para ayudar a quienes desean integrar su colección de películas en su sistema de juego.)
 
 ---
 
@@ -12,7 +12,7 @@ Pegasus Movie Data Base Scraper (PMDB-Scraper) es una herramienta diseñada para
 
 ## ⚡ Características
 - 🌍 Soporte de idiomas, español e inglés para el script desde `config.json`
-- ✅ Obtiene metadatos de películas desde **TMDb** (título, director, género, sinopsis, etc.).
+- ✅ Obtiene metadatos de películas desde **TMDB** (título, director, género, sinopsis, etc.).
 - 🏷️ Descarga imágenes como posters, screenshots y logos.
 - 🎥 Descarga tráilers en distintos idiomas y resoluciones.
 - 📊 Exporta los datos en **JSON** y los convierte en **TXT** (compatible con Pegasus Frontend).
@@ -22,17 +22,17 @@ Pegasus Movie Data Base Scraper (PMDB-Scraper) es una herramienta diseñada para
 
 ## Consejos:
 
-- El script extrae el año incluido en los títulos de los archivos y lo usa para mejorar la precisión de la búsqueda en TMDb. Si el año está presente en el nombre del archivo, el script lo extrae y lo compara con los años de lanzamiento de las películas en los resultados de búsqueda. Esto ayuda a seleccionar la película correcta en casos donde hay múltiples coincidencias con títulos similares.
+- El script extrae el año incluido en los títulos de los archivos y lo usa para mejorar la precisión de la búsqueda en TMDB. Si el año está presente en el nombre del archivo, el script lo extrae y lo compara con los años de lanzamiento de las películas en los resultados de búsqueda. Esto ayuda a seleccionar la película correcta en casos donde hay múltiples coincidencias con títulos similares.
 
-- ⚠️ Es posible que The Movie Database (TMDb) no encuentre algunos títulos por varias razones. Aquí te explico algunas causas comunes:
+- ⚠️ Es posible que The Movie Database (TMDB) no encuentre algunos títulos por varias razones. Aquí te explico algunas causas comunes:
 
-Errores ortográficos o de formato: Si el título de la película está mal escrito o tiene un formato incorrecto, TMDb puede no encontrarlo. Asegúrate de escribir el título correctamente y en el idioma original si es necesario.
+Errores ortográficos o de formato: Si el título de la película está mal escrito o tiene un formato incorrecto, TMDB puede no encontrarlo. Asegúrate de escribir el título correctamente y en el idioma original si es necesario.
 
 Títulos en diferentes idiomas: Algunas películas tienen títulos diferentes en otros idiomas. Si buscas un título traducido, es posible que no aparezca. Intenta buscar el título en su idioma original o un titulo traducido oficialmente.
 
-Contenido no disponible en la base de datos: TMDb es una base de datos colaborativa, por lo que no todos los títulos están registrados. Si es una película muy nueva, antigua o poco conocida, es posible que no esté en la base de datos.
+Contenido no disponible en la base de datos: TMDB es una base de datos colaborativa, por lo que no todos los títulos están registrados. Si es una película muy nueva, antigua o poco conocida, es posible que no esté en la base de datos.
 
-Problemas con la API o la búsqueda: al conectarse a TMDb a través de su API, puede haber problemas técnicos o limitaciones en la búsqueda.
+Problemas con la API o la búsqueda: al conectarse a TMDB a través de su API, puede haber problemas técnicos o limitaciones en la búsqueda.
 
 Restricciones regionales: Algunos títulos pueden estar disponibles solo en ciertas regiones debido a licencias o derechos de distribución. Esto puede afectar los resultados de búsqueda.
 
@@ -95,11 +95,11 @@ El script intentará descargar el tráiler en los idiomas configurados, pero si 
 
 ---
 
-## 🔑 Cómo obtener una clave API de TMDb
+## 🔑 Cómo obtener una clave API de TMDB
 
-Para utilizar PMDB-Scraper, necesitas una clave API de **The Movie Database (TMDb)**. Sigue estos pasos:
+Para utilizar PMDB-Scraper, necesitas una clave API de **The Movie Database (TMDB)**. Sigue estos pasos:
 
-1. Crea una cuenta en [TMDb](https://www.themoviedb.org/).
+1. Crea una cuenta en [TMDB](https://www.themoviedb.org/).
 2. Accede a tu perfil y ve a la sección **Configuración > API**.
 3. Crea una nueva clave API y cópiala en `config.json` bajo la clave `"api_key"`.
 
