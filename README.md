@@ -2,7 +2,7 @@
 
 ## ✨ Scraper de Metadatos de Películas para Pegasus Frontend
 
-Pegasus Movie Data Base Scraper (PMDB-S) es una herramienta diseñada para extraer metadatos de películas desde **The Movie Database (TMDb)** y generar archivos de metadatos compatibles con **Pegasus Frontend**. También descarga imágenes, tráilers y otros datos relevantes para mejorar la experiencia de navegación en tu colección de medios. (Esta herramienta no tiene ninguna asociación oficial con Pegasus Frontend. Es un proyecto comunitario diseñado para ayudar a quienes desean integrar su colección de películas en su sistema de juego.)
+Pegasus Movie Data Base Scraper (PMDB-Scraper) es una herramienta diseñada para extraer metadatos de películas desde **The Movie Database (TMDb)** y generar archivos de metadatos compatibles con **Pegasus Frontend**. (Esta herramienta no tiene ninguna asociación oficial con Pegasus Frontend. Es un proyecto comunitario diseñado para ayudar a quienes desean integrar su colección de películas en su sistema de juego.)
 
 ---
 
@@ -36,7 +36,7 @@ Problemas con la API o la búsqueda: al conectarse a TMDb a través de su API, p
 
 Restricciones regionales: Algunos títulos pueden estar disponibles solo en ciertas regiones debido a licencias o derechos de distribución. Esto puede afectar los resultados de búsqueda.
 
-Es importante tener un orden consistente en los títulos de los archivos de video ("películas") para asegurar que el script pueda encontrar la película deseada de manera efectiva. Si los títulos no siguen un formato adecuado, puede ser difícil identificar la película correctamente.
+Es importante tener un orden consistente en los títulos de los archivos de video para asegurar que el script pueda encontrar la película deseada de manera efectiva. Si los títulos no siguen un formato adecuado, puede ser difícil identificar la película correctamente.
 
 - Ejemplo de formato adecuado de títulos:
 
@@ -66,17 +66,32 @@ El script intentará descargar el tráiler en los idiomas configurados, pero si 
 1. Clona este repositorio o descárgalo manualmente:
 
    ```sh
-   git git@github.com:ZagonAb/PMDB-Scraper.git
-   cd PMDB-Scraper-main
+    git git@github.com:ZagonAb/PMDB-Scraper.git
    ```
-
-2. Instala las dependencias requeridas:
-
+      
    ```sh
-   pip install -r requirements.txt
+    cd PMDB-Scraper-main
    ```
+2. Crea y activa un entorno virtual de Python (recomendado):
 
-3. Configura tu archivo `config.json` según tus necesidades. Puedes definir los idiomas de búsqueda y metadata utilizando códigos de idioma estándar de TMDb, como es-ES para español de España, es-MX para español de México, en-US para inglés de Estados Unidos, entre otros. Puedes encontrar la lista completa de idiomas admitidos en la [documentación de TMDb.](https://developer.themoviedb.org/docs/languages)
+    ## Linux/macOS
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
+    
+    ## Windows
+    ```bash
+    python -m venv venv
+    venv\Scripts\activate
+    ```
+    
+3. Instala las dependencias dentro del entorno virtual:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+4. Configura tu archivo `config.json` según tus necesidades. **TMDB** utiliza los códigos de idioma basados en el estándar ISO 639-1 (códigos de dos letras, como es para español o en para inglés). En muchos casos, estos códigos se combinan con códigos de país según el estándar ISO 3166-1 para formar códigos como es-ES (español de España), es-MX (español Mexico), en-US (english United States) o pt-BR (portugués de Brasil) etc...
 
 ---
 
@@ -102,8 +117,15 @@ Antes de ejecutar el scraper, es importante configurar el archivo `config.json`.
 - **`calidad_trailer`**: Calidad del tráiler (`480p`, `720p` etc..).
 - **`timeout_descargas`**: Tiempo máximo (segundos) para descargas.
 - **`max_reintentos`**: **Número máximo de intentos** si una descarga falla (ej: `3`).
-- **`actualizar_manual`**: Esta opción solo funcionará si previamente ha obtenido metadatos y desea actualizar aquellas películas que no fueron encontradas o que contienen metadatos erróneos.
+- **`actualizar_manual`**: Esta opción solo funcionará si previamente ha obtenido metadatos y desea actualizar aquellas películas que no fueron encontradas o que contienen metadatos erróneos. `actualizar_manual` en (`true`), el script le permite seleccionar manualmente la película de su archivo metadata.json para ofrecerle múltiples coincidencias y pueda actualizar los metadatos correctamente, automáticamente recreará metadata.txt
 
+**Si el tráiler no está disponible en el idioma principal configurado en `trailer_lenguaje`, buscará automáticamente en otros idiomas en el orden en que están listados.**
+- Ejemplo: **"trailer_lenguaje": ["es-MX", "en-US"],** Este es mi caso, ya que no todos los trailers siempre están en español.
+
+En **"idiomas":** es algo similar, en mi caso los títulos de las películas en mi colección no son 100% en español, también tengo películas en ingles con títulos en ingles así que requiero de una configuración algo mas que **es-MX**
+- Ejemplo: **"idiomas": ["es-MX", "es-ES", "en-US"],**
+
+# Si no quiere algunos de los datos solo cambie de true a false.
 ```json
 
 {
@@ -136,26 +158,14 @@ Antes de ejecutar el scraper, es importante configurar el archivo `config.json`.
     "actualizar_manual": false
 }
 ```
+- Una vez teminada la configuracion del archivo config.json
+- Ejecuta el script principal `pmdb-scraper.py`
 
-### 📽️ Calidades de video soportadas
-
-PMDB-Scraper permite descargar tráilers en distintas calidades de video configurables en `calidad_trailer`:
-
-- `240p`
-- `360p`
-- `480p`
-- `720p`
-- `1080p`
-
-Si el tráiler no está disponible en el idioma principal configurado en `trailer_lenguaje`, buscará automáticamente en otros idiomas en el orden en que están listados.
-- Ejemplo: **"trailer_lenguaje": ["es-MX", "en-US"],** Este es mi caso, ya que no todos los trailers siempre están en español.
-
-En **"idiomas":** es algo similar, en mi caso los títulos de las películas en mi colección no son 100% en español, también tengo películas en ingles con títulos en ingles así que requiero de una configuración algo mas que **es-MX**
-- Ejemplo: **"idiomas": ["es-MX", "es-ES", "en-US"],**
-
-Si no quiere algunos de los datos solo cambie de true a false.
-
+```sh
+python3 pmdb-scraper.py
+```
 ---
+
 
 ## 📂 Estructura de directorio creada
 
@@ -170,37 +180,6 @@ Cuando se ejecuta PMDB-Scraper, se genera la siguiente estructura de directorios
 ```
 
 ---
-
-## 📄 Generación de archivos
-
-El script genera un archivo `metadata.json` con toda la información recopilada, que es necesario para:
-
-1. Exportar los datos a Pegasus Frontend.
-2. Utilizar la función `actualizar_manual` en futuras ejecuciones.
-
----
-
-## 💻 Uso
-
-Ejecuta el script principal `pmdb-scraper.py` desde la terminal:
-
-```sh
-python3 pmdb-scraper.py
-```
-
-### Modos de Ejecución
-
-- **Automático**: Extrae metadatos y descarga archivos sin interacción del usuario.
-- **Manual**: Permite seleccionar manualmente la película correcta si hay múltiples coincidencias. (requiere de metadata.json previamente generado.)
-
-### 🔄 ¿Para qué sirve `actualizar_manual`?
-
-Luego de terminar el raspado de películas, si aún no encuentra su película correctamente, puede utilizar `actualizar_manual` en (`true`), el script le permite seleccionar manualmente la película de su archivo metadata.json para ofrecerle múltiples coincidencias y pueda actualizar su metadata.json, automáticamente recreará metadata.txt
-
-> Puedes activar el modo manual en `config.json` cambiando `"actualizar_manual": true`.
-
----
-
 ## 🎯 Ejemplo de Salida
 
 ```sh
@@ -216,32 +195,16 @@ Películas no encontradas: 2
 - Logos: 5
 - Tráilers descargados: 6
 ```
+## 📄 Generación de archivos
 
+El script genera un archivo `metadata.json` con toda la información recopilada, que es necesario para:
+
+1. Exportar los datos a Pegasus Frontend.
+2. Utilizar la función `actualizar_manual` en futuras ejecuciones.
+3. Una vez obtenidos los metadatos, si desea modificar el archivo `metadata.txt `, se recomienda realizar los mismos cambios en el archivo  `metadata.json` para mantener la consistencia entre ambos archivos en futuras extracciones de metadatos.
 ---
 
-## Mejoras en el registro de logs y manejo de metadatos
-
-- Se han implementado mejoras en el script pmdb-scraper.py, optimizando la gestión de logs y la detección de datos faltantes.
-
-## Registro de logs mejorado:
-- Los mensajes de nivel INFO ahora solo se almacenan en el archivo console.log, evitando saturar la terminal.
-
-## Se han agregado mensajes de advertencia (WARNING) en console.log para resaltar la ausencia de ciertos metadatos clave, incluyendo:
-- Descripción de la película.
-- Póster (boxfront).
-- Backdrop (screenshot).
-- Logo (wheel).
-- Tráiler.
-- Rating (calificación).
-- Productoras.
-- Estas mejoras facilitan la identificación y solución de problemas relacionados con la obtención de metadatos.
-
----
-
-## Interfaz diseñada específicamente para resaltar estos metadatos.
-- [(PMDB-Theme)](https://github.com/ZagonAb/PMDB-Theme)
-
-
+## [(PMDB-Theme)](https://github.com/ZagonAb/PMDB-Theme) Interfaz diseñada específicamente para resaltar estos metadatos.
 ---
 
 ## ⚖️ Licencia
