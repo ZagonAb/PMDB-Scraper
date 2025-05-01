@@ -18,19 +18,15 @@ import queue
 import contextlib
 import io
 
-# Configurar el logging
 log_file = Path(__file__).parent / "console.log"
-
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler(log_file),
-        #logging.StreamHandler()  # Comenta o elimina esta línea para evitar que se muestre en la terminal
     ]
 )
 
-# Configuración de logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 TRANSLATIONS = {
@@ -123,20 +119,17 @@ TRANSLATIONS = {
 }
 
 def get_translation(key, interface_language):
-    """Obtiene la traducción correspondiente según el idioma de la interfaz, con soporte para claves anidadas."""
     translation = TRANSLATIONS.get(interface_language, TRANSLATIONS["es-ES"])
 
-    # Dividir la clave en partes (ejemplo: "metadata_fields.title")
     keys = key.split(".")
     for k in keys:
         translation = translation.get(k, None)
         if translation is None:
-            return key  # Si no se encuentra la clave, devolver la clave original
+            return key
 
     return translation
 
 def load_config():
-    """Carga la configuración permitiendo barras simples en rutas de Windows"""
     config_path = Path('config.json')
 
     if not config_path.exists():
@@ -144,32 +137,22 @@ def load_config():
         raise FileNotFoundError("config.json no encontrado")
 
     try:
-        # 1. Leer el archivo como texto
         with open(config_path, 'r', encoding='utf-8') as f:
             content = f.read()
 
-        # 2. Preprocesamiento especial para Windows
-        if os.name == 'nt':  # Solo en Windows
-            # Encontrar el valor de ruta_peliculas
+        if os.name == 'nt':
             match = re.search(r'"ruta_peliculas"\s*:\s*"([^"]+)"', content)
             if match:
                 original_path = match.group(1)
-                # Escapar las barras invertidas
                 corrected_path = original_path.replace('\\', '\\\\')
-                # Reemplazar en el contenido
                 content = content.replace(
                     f'"ruta_peliculas": "{original_path}"',
                     f'"ruta_peliculas": "{corrected_path}"'
                 )
-
-        # 3. Parsear el JSON
         config = json.loads(content)
-
-        # 4. Normalizar la ruta para el sistema operativo
         if 'ruta_peliculas' in config:
             config['ruta_peliculas'] = str(Path(config['ruta_peliculas']))
 
-        # 5. Normalizar códigos de idioma (es-Es -> es-ES)
         lang_fields = ['metadata_language', 'interface_language']
         for field in lang_fields:
             if field in config and isinstance(config[field], str):
@@ -185,35 +168,26 @@ def load_config():
     except Exception as e:
         logging.error(f"Error al cargar configuración: {str(e)}")
         raise
+
 def normalizar_ruta_para_sistema(ruta, es_asset=False):
-    """
-    Normaliza una ruta para el sistema operativo actual.
-    - es_asset: True si es una ruta de imagen/video (debe ser relativa a la carpeta media)
-    """
+
     if not ruta:
         return ''
 
     path_obj = Path(ruta)
-
-    # Determinar el separador de ruta según el SO
     separador = '\\' if os.name == 'nt' else '/'
 
-    # Para activos (imágenes/videos), la ruta debe ser relativa a la carpeta media
     if es_asset:
-        # Extraer solo el nombre del archivo y la subcarpeta de media
         return f".{separador}media{separador}{path_obj.parent.name}{separador}{path_obj.name}"
 
-    # Para el archivo principal, usar solo el nombre del archivo
     return f".{separador}{path_obj.name}"
 
 def descargar_imagen(url, ruta_destino):
-    """Descarga una imagen desde una URL con timeout y reintentos."""
     for intento in range(config['max_reintentos']):
         try:
             response = requests.get(url, stream=True, timeout=config['timeout_descargas'])
             if response.status_code == 200:
-                # Extraer la extensión del archivo de la URL
-                extension = Path(url).suffix.lower()  # Ejemplo: .jpg, .png
+                extension = Path(url).suffix.lower()
                 ruta_destino_con_extension = f"{ruta_destino}{extension}"
 
                 with open(ruta_destino_con_extension, 'wb') as f:
@@ -222,7 +196,7 @@ def descargar_imagen(url, ruta_destino):
                 return True
         except requests.exceptions.RequestException as e:
             logging.warning(f"Intento {intento + 1} fallido para {url}: {e}")
-            time.sleep((2 ** intento) * 1)  # Espera exponencial
+            time.sleep((2 ** intento) * 1)
     logging.error(f"Error al descargar imagen: {url}")
     return False
 
@@ -255,10 +229,9 @@ def archivo_tiene_imagenes(archivo, carpetas_imagenes):
         'boxfront': None,
         'screenshot': None,
         'wheel': None,
-        'video': None  # Nueva clave para tráilers
+        'video': None
     }
 
-    # Buscar archivos existentes con cualquier extensión
     for tipo, carpeta in carpetas_imagenes.items():
         for archivo_imagen in carpeta.glob(f"{nombre_base}.*"):
             imagenes_existentes[tipo.lower()] = str(archivo_imagen)
@@ -267,12 +240,10 @@ def archivo_tiene_imagenes(archivo, carpetas_imagenes):
     return imagenes_existentes
 
 def obtener_archivos_video(ruta):
-    """Obtiene una lista de archivos de video en la ruta especificada, excluyendo metadata.json y la carpeta media/video."""
     extensiones_video = ('.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.mpeg', '.ts')
     archivos = []
     try:
         for archivo in Path(ruta).glob('**/*'):
-            # Excluir archivos dentro de la carpeta media/video
             if "media/video" in str(archivo):
                 continue
             if archivo.is_file() and archivo.suffix.lower() in extensiones_video and archivo.name != "metadata.json":
@@ -282,40 +253,25 @@ def obtener_archivos_video(ruta):
     return archivos
 
 def extraer_nombre_pelicula(nombre_archivo):
-    """Extrae el nombre de la película del nombre del archivo con manejo especial para números."""
     nombre = Path(nombre_archivo).stem
-
-    # Conservar números que son parte del título (como "3096 Dias")
-    # Paso 1: Reemplazar caracteres especiales, pero preservar los adyacentes a números
     nombre = re.sub(r'(?<!\d)[\-_.()\[\]](?!\d)', ' ', nombre)
-
-    # Paso 2: Eliminar términos técnicos pero solo si no están unidos a números
     patrones_tecnicos = r'(?<!\d)(720p|1080p|2160p|BluRay|x264|WEB-DL|HEVC|XviD|HDR|DTS)(?!\d)'
     nombre = re.sub(patrones_tecnicos, '', nombre, flags=re.IGNORECASE)
-
-    # Paso 3: Eliminar años entre paréntesis (pero solo si están al final)
     nombre = re.sub(r'\s*\(\d{4}\)$', '', nombre)
-
     return nombre.strip()
 
 def descargar_trailer(tmdb, pelicula_id, ruta_destino, calidad):
     try:
-        # Redirigir la salida estándar y de errores a /dev/null
         sys.stdout = open(os.devnull, 'w')
         sys.stderr = open(os.devnull, 'w')
-
-        # Guardar el idioma original de la instancia TMDb
         idioma_original = tmdb.language
 
-        # Intentar descargar el tráiler en cada idioma configurado
         for idioma in config['trailer_lenguaje']:
             try:
-                # Cambiar el idioma de la instancia TMDb
                 tmdb.language = idioma
                 videos = tmdb.movie(pelicula_id).videos()
 
                 if videos:
-                    # Filtrar tráilers
                     trailers = [video for video in videos if video.type == "Trailer"]
                     if trailers:
                         logging.info(f"Se encontraron {len(trailers)} tráilers para la película ID {pelicula_id} en idioma {idioma}")
@@ -325,7 +281,6 @@ def descargar_trailer(tmdb, pelicula_id, ruta_destino, calidad):
                                 trailer_url = f"https://www.youtube.com/watch?v={trailer.key}"
                                 logging.info(f"Intentando descargar tráiler desde YouTube: {trailer_url}")
 
-                                # Mapeo de calidades a formatos de yt-dlp
                                 calidad_mapping = {
                                     "240p": "bestvideo[height<=240]+bestaudio/best[height<=240]",
                                     "360p": "bestvideo[height<=360]+bestaudio/best[height<=360]",
@@ -334,20 +289,18 @@ def descargar_trailer(tmdb, pelicula_id, ruta_destino, calidad):
                                     "1080p": "bestvideo[height<=1080]+bestaudio/best[height<=1080]"
                                 }
 
-                                # Obtener el formato correcto según la calidad configurada
                                 formato = calidad_mapping.get(calidad.lower(), "bestvideo[height<=240]+bestaudio/best[height<=240]")
 
                                 try:
-                                    # Configurar yt-dlp con manejo silencioso de errores
                                     ydl_opts = {
                                         'format': formato,
                                         'outtmpl': f"{ruta_destino}.%(ext)s",
-                                        'quiet': True,  # Suprime la salida de yt-dlp
-                                        'no_warnings': True,  # Suprime las advertencias
+                                        'quiet': True,
+                                        'no_warnings': True,
                                         'merge_output_format': 'mp4',
-                                        'geo_bypass': True,  # Intenta evitar restricciones geográficas
-                                        'ignoreerrors': True,  # Ignora errores y continúa con el siguiente video
-                                        'no_check_certificate': True,  # Evita problemas con certificados SSL
+                                        'geo_bypass': True,
+                                        'ignoreerrors': True,
+                                        'no_check_certificate': True,
                                     }
 
                                     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -361,9 +314,8 @@ def descargar_trailer(tmdb, pelicula_id, ruta_destino, calidad):
 
             except Exception as e:
                 logging.error(f"Error en el idioma {idioma}: {e}")
-                continue  # Silenciosamente continúa con el siguiente idioma
+                continue
 
-        # Restaurar el idioma original de la instancia TMDb
         tmdb.language = idioma_original
         return False
 
@@ -371,17 +323,12 @@ def descargar_trailer(tmdb, pelicula_id, ruta_destino, calidad):
         logging.error(f"Error general en descargar_trailer: {e}")
         return False
     finally:
-        # Restaurar la salida estándar y de errores
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
 
 def obtener_duracion_con_ffprobe(ruta_archivo):
-    """
-    Obtiene la duración de un archivo de video usando ffprobe.
-    Devuelve la duración en segundos.
-    """
+
     try:
-        # Comando para obtener la duración en segundos
         comando = [
             'ffprobe', '-v', 'error', '-show_entries', 'format=duration',
             '-of', 'default=noprint_wrappers=1:nokey=1', ruta_archivo
@@ -390,7 +337,7 @@ def obtener_duracion_con_ffprobe(ruta_archivo):
 
         if resultado.returncode == 0:
             duracion_segundos = float(resultado.stdout.strip())
-            return int(duracion_segundos)  # Devolver la duración en segundos como entero
+            return int(duracion_segundos)
         else:
             logging.warning(f"No se pudo obtener la duración con ffprobe para {ruta_archivo}: {resultado.stderr}")
             return None
@@ -399,7 +346,6 @@ def obtener_duracion_con_ffprobe(ruta_archivo):
         return None
 
 def obtener_info_tecnica(ruta_archivo):
-    """Obtiene información técnica del video usando ffprobe."""
     try:
         cmd = [
             'ffprobe', '-v', 'error', '-select_streams', 'v:0',
@@ -423,7 +369,6 @@ def obtener_info_tecnica(ruta_archivo):
             audio_codec = audio_info[0].upper()
             channels = int(audio_info[1])
 
-            # Determinar resolución
             if width >= 1920 or height >= 1080:
                 resolution = "1080 HD"
             elif width >= 1280 or height >= 720:
@@ -431,7 +376,6 @@ def obtener_info_tecnica(ruta_archivo):
             else:
                 resolution = "SD"
 
-            # Determinar audio
             if channels >= 6:
                 audio = "DOLBY 5.1"
             elif channels >= 2:
@@ -456,16 +400,15 @@ def obtener_info_tecnica(ruta_archivo):
     }
 
 def obtener_clasificacion_mpa(tmdb, pelicula_id):
-    """Obtiene SOLO la clasificación MPA (EE.UU.) en formato de letras (G, PG, R, etc.)."""
     try:
         detalles = tmdb.movie(pelicula_id).details(append_to_response="release_dates")
         if hasattr(detalles, 'release_dates') and detalles.release_dates:
             for release in detalles.release_dates.results:
-                if release.iso_3166_1 == "US":  # Priorizar EE.UU. (MPA)
+                if release.iso_3166_1 == "US":
                     for date in release.release_dates:
                         if date.certification:
-                            return date.certification  # Ejemplo: "PG-13", "R"
-        return "NR"  # "No Rated" si no se encuentra
+                            return date.certification
+        return "NR"
     except Exception as e:
         logging.error(f"Error al obtener clasificación MPA: {e}")
         return "NR"
@@ -473,20 +416,15 @@ def obtener_clasificacion_mpa(tmdb, pelicula_id):
 def obtener_metadata_pelicula(tmdb, nombre_pelicula, carpetas_imagenes, archivo_video, config, imagenes_existentes=None):
     for intento in range(config['max_reintentos']):
         try:
-            # Verificar si el archivo es un tráiler (está dentro de la carpeta media/video)
             if "media/video" in str(archivo_video):
                 logging.info(f"El archivo {archivo_video.name} es un tráiler. Saltando...")
                 return None
 
             info_tecnica = obtener_info_tecnica(archivo_video)
-
-            # Usar las imágenes existentes si están disponibles
             boxfront_local = imagenes_existentes.get('boxfront') if imagenes_existentes else None
             screenshot_local = imagenes_existentes.get('screenshot') if imagenes_existentes else None
             wheel_local = imagenes_existentes.get('wheel') if imagenes_existentes else None
             video_local = imagenes_existentes.get('video') if imagenes_existentes else None
-
-            # Extraer el año del nombre del archivo si existe
             año_archivo = None
             año_match = re.search(r'\((\d{4})\)', archivo_video.name)
             if año_match:
@@ -494,11 +432,8 @@ def obtener_metadata_pelicula(tmdb, nombre_pelicula, carpetas_imagenes, archivo_
                 nombre_sin_año = re.sub(r'\s*\(\d{4}\)', '', nombre_pelicula).strip()
             else:
                 nombre_sin_año = nombre_pelicula
-
-            # Lista para almacenar resultados de búsqueda en todos los idiomas
             todos_resultados = []
 
-            # Buscar en cada idioma configurado
             for idioma in config['idiomas']:
                 tmdb.language = idioma
                 resultados = tmdb.search().movies(nombre_sin_año)
@@ -509,30 +444,22 @@ def obtener_metadata_pelicula(tmdb, nombre_pelicula, carpetas_imagenes, archivo_
                 logging.warning(f"No se encontró información para la película: {nombre_pelicula} (Archivo: {archivo_video.name})")
                 return None
 
-            # Función para calcular la similitud entre el título del archivo y el título de la película
             def calcular_similitud(titulo_archivo, titulo_pelicula):
-                # Calcula la similitud entre dos títulos usando RapidFuzz
                 return fuzz.ratio(titulo_archivo.lower(), titulo_pelicula.lower()) / 100
-
-            # Seleccionar candidatos que pasen los filtros iniciales
             candidatos_validos = []
 
             for resultado in todos_resultados:
-                # Verificar duración - requiere consulta adicional para obtener información detallada
-                tmdb.language = config['metadata_language'][0]  # Usar primer idioma para verificación
+                tmdb.language = config['metadata_language'][0]
                 pelicula_detalle = tmdb.movie(resultado.id).details()
 
-                # Filtrar películas cortas (menor a 60 minutos)
                 if hasattr(pelicula_detalle, 'runtime') and pelicula_detalle.runtime and pelicula_detalle.runtime < 60:
                     logging.warning(f"Descartando película {resultado.title} (ID: {resultado.id}) por duración insuficiente: {pelicula_detalle.runtime} minutos")
                     continue
 
-                # Obtener el año de la película
                 año_resultado = None
                 if hasattr(resultado, 'release_date') and resultado.release_date:
                     año_resultado = str(resultado.release_date.year)
 
-                # Si la película pasa el filtro de duración, la agregamos como candidata
                 candidato = {
                     'resultado': resultado,
                     'año': año_resultado,
@@ -544,18 +471,14 @@ def obtener_metadata_pelicula(tmdb, nombre_pelicula, carpetas_imagenes, archivo_
                 logging.warning(f"No se encontraron candidatos válidos después del filtro de duración para: {nombre_pelicula} (Archivo: {archivo_video.name})")
                 return None
 
-            # Seleccionar el resultado más adecuado entre los candidatos válidos
             mejor_resultado = None
             mejor_puntaje = 0
 
             for candidato in candidatos_validos:
                 resultado = candidato['resultado']
                 año_resultado = candidato['año']
-
-                # Calcular similitud del título
                 puntaje = calcular_similitud(nombre_sin_año, resultado.title)
 
-                # Priorizar resultados que coincidan en el año
                 if año_archivo and año_resultado and año_archivo == año_resultado:
                     puntaje += 0.5
 
@@ -567,46 +490,35 @@ def obtener_metadata_pelicula(tmdb, nombre_pelicula, carpetas_imagenes, archivo_
                 logging.warning(f"No se encontró un resultado adecuado para: {nombre_pelicula} (Archivo: {archivo_video.name})")
                 return None
 
-            # Variables para almacenar los mejores metadatos
             metadata_final = None
             mejor_tagline = None
             mejor_descripcion = None
 
-            # Obtener detalles de la película en varios idiomas según las prioridades
             for idioma_metadata in config['metadata_language']:
                 tmdb.language = idioma_metadata
                 pelicula_id = mejor_resultado.id
                 pelicula = tmdb.movie(pelicula_id).details(append_to_response="credits,images,videos")
                 imagenes = tmdb.movie(pelicula_id).images()
-
-                # Verificar si tenemos descripción y tagline en este idioma
                 descripcion_actual = pelicula.overview if hasattr(pelicula, 'overview') else ""
                 tagline_actual = pelicula.tagline if hasattr(pelicula, 'tagline') else ""
 
-                # Actualizar la mejor descripción si la actual no está vacía
                 if descripcion_actual and not mejor_descripcion:
                     mejor_descripcion = descripcion_actual
 
-                # Actualizar el mejor tagline si el actual no está vacío
                 if tagline_actual and not mejor_tagline:
                     mejor_tagline = tagline_actual
 
-                # Si tenemos tanto descripción como tagline, no seguimos buscando
                 if mejor_descripcion and mejor_tagline:
                     break
 
-            # Si después de recorrer todos los idiomas no hay descripción, usamos cualquier idioma disponible
             if not mejor_descripcion:
                 tmdb.language = config['metadata_language'][0]
                 pelicula = tmdb.movie(pelicula_id).details(append_to_response="credits,images,videos")
                 mejor_descripcion = pelicula.overview if hasattr(pelicula, 'overview') else "Sin descripción disponible"
 
-            # Usar el primer idioma para obtener el resto de metadatos
             tmdb.language = config['metadata_language'][0]
             pelicula = tmdb.movie(pelicula_id).details(append_to_response="credits,images,videos")
             imagenes = tmdb.movie(pelicula_id).images()
-
-            # Descargar imágenes si están configuradas
             nombre_base = archivo_video.stem
 
             if not boxfront_local and config['obtener_datos']['poster'] and pelicula.poster_path:
@@ -627,31 +539,23 @@ def obtener_metadata_pelicula(tmdb, nombre_pelicula, carpetas_imagenes, archivo_
                     logging.warning(f"No se pudo descargar el backdrop para la película: {nombre_pelicula} (Archivo: {archivo_video.name})")
 
             if not wheel_local and config['obtener_datos']['logo'] and hasattr(imagenes, 'logos') and imagenes.logos:
-                # Reorganizar la lógica de selección de logos basada en metadata_language
                 logos_ordenados = []
-                metadata_lang = config['metadata_language'][0].split('-')[0]  # Obtener 'es' de 'es-MX'
-
-                # Primero buscar logos en el idioma configurado
+                metadata_lang = config['metadata_language'][0].split('-')[0]
                 logos_primary = [logo for logo in imagenes.logos if logo.iso_639_1 == metadata_lang]
                 if logos_primary:
                     logos_ordenados.extend(logos_primary)
 
-                # Si el idioma configurado no es inglés y no se encontraron logos,
-                # buscar logos en inglés como respaldo
                 if not logos_ordenados and metadata_lang != 'en':
                     logos_en = [logo for logo in imagenes.logos if logo.iso_639_1 == 'en']
                     logos_ordenados.extend(logos_en)
 
-                # Si aún no hay logos, usar logos sin idioma especificado
                 if not logos_ordenados:
                     logos_null = [logo for logo in imagenes.logos if logo.iso_639_1 is None]
                     logos_ordenados.extend(logos_null)
 
-                # Si todavía no hay logos, usar el primer logo disponible
                 if not logos_ordenados and imagenes.logos:
                     logos_ordenados = [imagenes.logos[0]]
 
-                # Intentar descargar el primer logo de la lista ordenada
                 if logos_ordenados:
                     logo_url = f"https://image.tmdb.org/t/p/original{logos_ordenados[0].file_path}"
                     logo_path = carpetas_imagenes['wheel'] / nombre_base
@@ -662,7 +566,6 @@ def obtener_metadata_pelicula(tmdb, nombre_pelicula, carpetas_imagenes, archivo_
                 else:
                     logging.warning(f"No se encontró logo para la película: {nombre_pelicula} (Archivo: {archivo_video.name})")
 
-            # Descargar tráiler si está configurado
             if not video_local and config['obtener_datos']['trailer']:
                 video_path = carpetas_imagenes['video'] / nombre_base
                 if descargar_trailer(tmdb, pelicula_id, video_path, config['calidad_trailer']):
@@ -670,38 +573,34 @@ def obtener_metadata_pelicula(tmdb, nombre_pelicula, carpetas_imagenes, archivo_
                 else:
                     logging.warning(f"No se pudo descargar el tráiler para la película: {nombre_pelicula} (Archivo: {archivo_video.name})")
 
-            # Crear el diccionario de metadatos
             duracion_tmdb = pelicula.runtime if pelicula.runtime else None
 
-            # Si no hay duración en TMDb, obtenerla localmente con ffprobe
             if not duracion_tmdb:
                 duracion_tmdb = obtener_duracion_con_ffprobe(archivo_video)
 
-            # Versión actual (obtiene clasificación según idioma configurado)
-            # Nueva versión (siempre prioriza EE.UU.)
-            clasificacion = obtener_clasificacion_mpa(tmdb, pelicula_id)  # "PG-13", "R", etc.
+            clasificacion = obtener_clasificacion_mpa(tmdb, pelicula_id)
 
             metadata_final = {
-                'titulo': archivo_video.stem,  # Usar el nombre del archivo como título
-                'titulo_tmdb': pelicula.title,  # Guardar el título de TMDb en un campo separado
+                'titulo': archivo_video.stem,
+                'titulo_tmdb': pelicula.title,
                 'titulo_original': pelicula.original_title if hasattr(pelicula, 'original_title') else None,
                 'año': str(pelicula.release_date.year) if pelicula.release_date else None,
-                'duracion': duracion_tmdb,  # Usar la duración de TMDb o ffprobe
+                'duracion': duracion_tmdb,
                 'director': next((crew.name for crew in pelicula.credits.crew if crew.job == "Director"), "Desconocido"),
                 'productora': [company.name for company in pelicula.production_companies] if pelicula.production_companies else [],
                 'rating': round(pelicula.vote_average / 10, 2) if pelicula.vote_average else 0,
-                'descripcion': mejor_descripcion,  # Usar la mejor descripción encontrada
+                'descripcion': mejor_descripcion,
                 'generos': [genero.name for genero in pelicula.genres],
                 'boxfront_local': boxfront_local,
                 'screenshot_local': screenshot_local,
                 'wheel_local': wheel_local,
-                'video_local': video_local,  # Nueva clave para el tráiler
+                'video_local': video_local,
                 'tmdb_id': pelicula_id,
                 'fecha_lanzamiento': str(pelicula.release_date) if pelicula.release_date else None,
-                'idioma_metadata': ", ".join(config['metadata_language']),  # Lista de idiomas usados
-                'x-added-date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # Fecha de adición
-                'x-Duration': duracion_tmdb,  # Duración en segundos
-                'x-tagline': mejor_tagline,  # Usar el mejor tagline encontrado
+                'idioma_metadata': ", ".join(config['metadata_language']),
+                'x-added-date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                'x-Duration': duracion_tmdb,
+                'x-tagline': mejor_tagline,
                 'x-classification': clasificacion if clasificacion else "Desconocido",
                 'x-codec': info_tecnica['x-codec'],
                 'x-resolution': info_tecnica['x-resolution'],
@@ -713,13 +612,12 @@ def obtener_metadata_pelicula(tmdb, nombre_pelicula, carpetas_imagenes, archivo_
 
         except Exception as e:
             logging.error(f"Error al procesar {nombre_pelicula} (Intento {intento + 1}): {e}")
-            time.sleep((2 ** intento) * 1)  # Espera exponencial entre reintentos
+            time.sleep((2 ** intento) * 1)
 
     logging.error(f"Error al procesar {nombre_pelicula} después de {config['max_reintentos']} intentos.")
     return None
 
 def obtener_metadata_serie(tmdb, nombre_serie, carpetas_imagenes, ruta_carpeta):
-    """Obtiene la metadata de una serie y descarga las imágenes."""
     try:
         resultados = tmdb.search().tv(nombre_serie)
         if not resultados:
@@ -770,14 +668,12 @@ def obtener_metadata_serie(tmdb, nombre_serie, carpetas_imagenes, ruta_carpeta):
         return None
 
 def cargar_metadata_existente(ruta_metadata):
-    """Carga el archivo de metadata existente si existe."""
     if ruta_metadata.exists():
         with open(ruta_metadata, 'r', encoding='utf-8') as f:
             return json.load(f)
     return None
 
 def actualizar_metadata(nuevos_datos, ruta_metadata):
-    """Actualiza el archivo de metadata con nuevos datos."""
     if ruta_metadata.exists():
         with open(ruta_metadata, 'r', encoding='utf-8') as f:
             metadata_existente = json.load(f)
@@ -795,11 +691,10 @@ def actualizar_metadata(nuevos_datos, ruta_metadata):
                     "screenshot": 0,
                     "wheel": 0
                 },
-                "trailers_descargados": 0  # Nueva estadística para tráilers
+                "trailers_descargados": 0
             }
         }
 
-    # Actualizar o agregar nuevos elementos
     for nuevo_item in nuevos_datos["metadata"]:
         archivo_original = nuevo_item.get("archivo_original")
         encontrado = False
@@ -823,7 +718,6 @@ def actualizar_metadata(nuevos_datos, ruta_metadata):
                 "metadata": nuevo_item["metadata"]
             })
 
-    # Actualizar estadísticas
     metadata_existente["estadisticas"]["total_procesadas"] += nuevos_datos["estadisticas"]["total_procesadas"]
     metadata_existente["estadisticas"]["encontradas"] += nuevos_datos["estadisticas"]["encontradas"]
     metadata_existente["estadisticas"]["no_encontradas"] += nuevos_datos["estadisticas"]["no_encontradas"]
@@ -832,16 +726,13 @@ def actualizar_metadata(nuevos_datos, ruta_metadata):
     metadata_existente["estadisticas"]["imagenes_descargadas"]["wheel"] += nuevos_datos["estadisticas"]["imagenes_descargadas"]["wheel"]
     metadata_existente["estadisticas"]["trailers_descargados"] += nuevos_datos["estadisticas"].get("trailers_descargados", 0)
 
-    # Guardar la metadata actualizada en JSON
     with open(ruta_metadata, 'w', encoding='utf-8') as f:
         json.dump(metadata_existente, f, ensure_ascii=False, indent=2)
 
-    # Generar el archivo TXT
     ruta_txt = ruta_metadata.with_suffix('.txt')
     convert_json_to_txt(metadata_existente, ruta_txt)
 
 def archivo_tiene_metadata(archivo, metadata_existente):
-    """Verifica si un archivo ya tiene metadata en el archivo .json."""
     if metadata_existente and "metadata" in metadata_existente:
         for item in metadata_existente["metadata"]:
             if item.get("archivo_original") == str(archivo):
@@ -849,12 +740,10 @@ def archivo_tiene_metadata(archivo, metadata_existente):
     return False
 
 def listar_peliculas(metadata_existente):
-    """Lista las películas disponibles en metadata.json en orden alfabético."""
     if not metadata_existente or "metadata" not in metadata_existente:
         logging.error(get_translation("no_metadata", config['interface_language']))
         return None
 
-    # Ordenar las películas alfabéticamente por el campo "nombre_extraido"
     peliculas_ordenadas = sorted(metadata_existente["metadata"], key=lambda x: x.get('nombre_extraido', '').lower())
 
     print(f"\n{get_translation('movies_available', config['interface_language'])}")
@@ -871,17 +760,12 @@ def listar_peliculas(metadata_existente):
 def actualizar_pelicula_manual(tmdb, pelicula, carpetas_imagenes, ruta_metadata):
     nombre_pelicula = pelicula.get("nombre_extraido", "Desconocido")
     archivo_video = Path(pelicula.get("archivo_original", ""))
-
     info_tecnica = obtener_info_tecnica(archivo_video)
-
     print(f"\n{get_translation('updating_metadata_for', config['interface_language'])}: {nombre_pelicula}")
-
-    # Buscar en TMDb usando el idioma de metadata
     tmdb.language = config['metadata_language']
     resultados = tmdb.search().movies(nombre_pelicula)
 
     if not resultados:
-        # Si no hay resultados en el idioma principal, intentar con los idiomas alternativos
         for idioma in config['idiomas']:
             if idioma != config['metadata_language']:
                 tmdb.language = idioma
@@ -893,25 +777,21 @@ def actualizar_pelicula_manual(tmdb, pelicula, carpetas_imagenes, ruta_metadata)
         logging.warning(f"No se encontraron resultados para: {nombre_pelicula}")
         return
 
-    # Mostrar resultados al usuario con información detallada
     print(f"\n{get_translation('results_for', config['interface_language'])} '{nombre_pelicula}':")
-    print("\n" + "="*100)  # Línea separadora
+    print("\n" + "="*100)
 
-    # Asegurarse de usar el idioma de metadata para mostrar los detalles
     tmdb.language = config['metadata_language']
 
     for i, resultado in enumerate(resultados):
         try:
-            # Obtener detalles completos de la película en el idioma de metadata
             detalles = tmdb.movie(resultado.id).details()
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
                 logging.warning(f"Película con ID {resultado.id} no encontrada en TMDb. Saltando...")
-                continue  # Saltar a la siguiente película
+                continue
             else:
-                raise  # Relanzar la excepción si no es un error 404
+                raise
 
-        # Manejar la fecha de lanzamiento
         año = "Desconocido"
         if hasattr(detalles, 'release_date') and detalles.release_date:
             if isinstance(detalles.release_date, str):
@@ -923,12 +803,9 @@ def actualizar_pelicula_manual(tmdb, pelicula, carpetas_imagenes, ruta_metadata)
             else:
                 año = str(detalles.release_date.year)
 
-        # Obtener el poster URL
         poster_url = None
         if hasattr(detalles, 'poster_path') and detalles.poster_path:
             poster_url = f"https://image.tmdb.org/t/p/original{detalles.poster_path}"
-
-        # Mostrar información detallada
         print(f"\n{i + 1}. {get_translation('metadata_fields.title', config['interface_language'])}: {detalles.title}")
         print(f"   {get_translation('metadata_fields.year', config['interface_language'])}: {año}")
         if hasattr(detalles, 'original_title') and detalles.original_title != detalles.title:
@@ -954,47 +831,36 @@ def actualizar_pelicula_manual(tmdb, pelicula, carpetas_imagenes, ruta_metadata)
     try:
         pelicula_seleccionada = resultados[int(seleccion) - 1]
         pelicula_id = pelicula_seleccionada.id
-
-        # Nueva versión (siempre prioriza EE.UU.)
-        clasificacion = obtener_clasificacion_mpa(tmdb, pelicula_id)  # "PG-13", "R", etc.
-
-        # Asegurarse de usar el idioma de metadata para los detalles finales
+        clasificacion = obtener_clasificacion_mpa(tmdb, pelicula_id)
         tmdb.language = config['metadata_language']
         pelicula = tmdb.movie(pelicula_id).details(append_to_response="credits,images,videos")
         imagenes = tmdb.movie(pelicula_id).images()
-
         nombre_base = archivo_video.stem
         boxfront_local = screenshot_local = wheel_local = video_local = None
 
-        # Descargar poster si está configurado
         if config['obtener_datos']['poster'] and pelicula.poster_path:
             poster_url = f"https://image.tmdb.org/t/p/original{pelicula.poster_path}"
             poster_path = carpetas_imagenes['boxFront'] / nombre_base
             if descargar_imagen(poster_url, poster_path):
                 boxfront_local = str(poster_path) + Path(poster_url).suffix
 
-        # Descargar backdrop si está configurado
         if config['obtener_datos']['backdrop'] and pelicula.backdrop_path:
             backdrop_url = f"https://image.tmdb.org/t/p/original{pelicula.backdrop_path}"
             backdrop_path = carpetas_imagenes['screenshot'] / nombre_base
             if descargar_imagen(backdrop_url, backdrop_path):
                 screenshot_local = str(backdrop_path) + Path(backdrop_url).suffix
 
-        # Descargar logo si está configurado
         if config['obtener_datos']['logo'] and hasattr(imagenes, 'logos') and imagenes.logos:
             logo_url = f"https://image.tmdb.org/t/p/original{imagenes.logos[0].file_path}"
             logo_path = carpetas_imagenes['wheel'] / nombre_base
             if descargar_imagen(logo_url, logo_path):
                 wheel_local = str(logo_path) + Path(logo_url).suffix
 
-        # Descargar trailer si está configurado
         video_local = None
         if config['obtener_datos']['trailer']:
             video_path = carpetas_imagenes['video'] / nombre_base
-            # Intentar descargar el tráiler en los idiomas configurados
             if descargar_trailer(tmdb, pelicula_id, video_path, config['calidad_trailer']):
                 video_local = str(video_path) + ".mp4"
-                #logging.info(f"{get_translation('trailer_downloaded', config['interface_language'])} {nombre_pelicula}")
 
             else:
                 logging.warning(f"{get_translation('trailer_no_downloaded', config['interface_language'])} {nombre_pelicula}")
@@ -1018,7 +884,7 @@ def actualizar_pelicula_manual(tmdb, pelicula, carpetas_imagenes, ruta_metadata)
             'idioma_metadata': config['metadata_language'],
             'x-classification': clasificacion if clasificacion else "Desconocido",
             'x-added-date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            'x-codec': info_tecnica['x-codec'],  # <-- Ahora info_tecnica está definida
+            'x-codec': info_tecnica['x-codec'],
             'x-resolution': info_tecnica['x-resolution'],
             'x-aspect': info_tecnica['x-aspect'],
             'x-audio': info_tecnica['x-audio']
@@ -1037,12 +903,9 @@ def actualizar_pelicula_manual(tmdb, pelicula, carpetas_imagenes, ruta_metadata)
 
         with open(ruta_metadata, 'w', encoding='utf-8') as f:
             json.dump(metadata_existente, f, ensure_ascii=False, indent=2)
-
-        # Generar el archivo TXT actualizado
         ruta_txt = ruta_metadata.with_suffix('.txt')
         convert_json_to_txt(metadata_existente, ruta_txt)
 
-        # Mensaje de confirmación
         print(f"\n{get_translation('metadata_updated', config['interface_language'])}: {nombre_pelicula}")
         print(f"Metadatos actualizados correctamente para: {nombre_pelicula}")
         logging.info(f"Metadatos actualizados correctamente para: {nombre_pelicula}")
@@ -1053,13 +916,10 @@ def actualizar_pelicula_manual(tmdb, pelicula, carpetas_imagenes, ruta_metadata)
         print(f"Detalles del error: {e}")
 
 def convert_json_to_txt(json_data, output_file):
-    """Convierte los datos JSON a formato txt con rutas correctas para cada SO."""
     try:
-        # Determinar el separador de ruta según el SO
         separador = '\\' if os.name == 'nt' else '/'
 
         with open(output_file, 'w', encoding='utf-8') as f:
-            # Escribir la cabecera
             f.write("collection: Movies\n")
             f.write("shortname: movies\n")
             f.write("extension: mp4, mkv, avi, mov, wmv, flv, mpeg, ts\n")
@@ -1067,7 +927,6 @@ def convert_json_to_txt(json_data, output_file):
 
             for item in json_data["metadata"]:
                 try:
-                    # Si metadata es None, usar información básica del archivo
                     if item.get('metadata') is None:
                         archivo_original = item.get('archivo_original', '')
                         nombre_archivo = normalizar_ruta_para_sistema(archivo_original)
@@ -1105,14 +964,12 @@ def convert_json_to_txt(json_data, output_file):
                         x_tagline = metadata.get('x-tagline', '')
                         x_clasification = metadata.get('x-classification', 'Unknown')
 
-                        # Normalizar rutas
                         archivo_normalizado = normalizar_ruta_para_sistema(archivo_original)
                         boxfront_normalizado = normalizar_ruta_para_sistema(metadata.get('boxfront_local', ''), True)
                         screenshot_normalizado = normalizar_ruta_para_sistema(metadata.get('screenshot_local', ''), True)
                         wheel_normalizado = normalizar_ruta_para_sistema(metadata.get('wheel_local', ''), True)
                         video_normalizado = normalizar_ruta_para_sistema(metadata.get('video_local', ''), True)
 
-                        # Obtener timestamp si existe
                         x_timestamp = ""
                         if 'x-added-date' in metadata:
                             try:
@@ -1121,7 +978,6 @@ def convert_json_to_txt(json_data, output_file):
                             except:
                                 x_timestamp = ""
 
-                        # Escribir metadatos
                         f.write(f"game: {titulo}\n")
                         f.write("file:\n")
                         f.write(f"  {archivo_normalizado}\n")
@@ -1142,13 +998,11 @@ def convert_json_to_txt(json_data, output_file):
                         if video_normalizado:
                             f.write(f"assets.video: {video_normalizado}\n")
 
-                        # Campos técnicos
                         f.write(f"x-codec: {metadata.get('x-codec', 'Unknown')}\n")
                         f.write(f"x-resolution: {metadata.get('x-resolution', 'Unknown')}\n")
                         f.write(f"x-aspect: {metadata.get('x-aspect', 'Unknown')}\n")
                         f.write(f"x-audio: {metadata.get('x-audio', 'Unknown')}\n")
 
-                        # Campos adicionales
                         if x_timestamp:
                             f.write(f"x-added-timestamp: {x_timestamp}\n")
                         if metadata.get('x-Duration'):
@@ -1165,7 +1019,6 @@ def convert_json_to_txt(json_data, output_file):
         logging.error(f"Error en la conversión a TXT: {e}")
 
 def main():
-    # Cargar la configuración
     global config
     config = load_config()
 
@@ -1198,7 +1051,6 @@ def main():
     carpetas_imagenes = crear_carpetas_imagenes(config['ruta_peliculas'])
     tmdb = TMDb(key=config['api_key'], language=config['metadata_language'])
 
-    # Cargar metadata existente si existe
     ruta_metadata = Path(config['ruta_peliculas']) / f"metadata.{config['exportar_formato']}"
     metadata_existente = cargar_metadata_existente(ruta_metadata)
 
@@ -1208,17 +1060,14 @@ def main():
             actualizar_pelicula_manual(tmdb, pelicula, carpetas_imagenes, ruta_metadata)
         return
     else:
-        # Modo automático
-        logging.info(get_translation("processing_files", config['interface_language']).format(len(archivos)))
 
-        # Cola para mantener el orden de los resultados
+        logging.info(get_translation("processing_files", config['interface_language']).format(len(archivos)))
         resultados_queue = queue.Queue()
 
         def procesar_archivo(archivo):
-            # Verificar si el archivo ya tiene metadata
             if metadata_existente and archivo_tiene_metadata(archivo, metadata_existente):
                 logging.info(f"El archivo {archivo.name} ya tiene metadata. Saltando...")
-                resultados["estadisticas"]["total_procesadas"] += 1  # Añadir esta línea
+                resultados["estadisticas"]["total_procesadas"] += 1
                 return
 
             imagenes_existentes = archivo_tiene_imagenes(archivo, carpetas_imagenes)
@@ -1226,7 +1075,7 @@ def main():
             nombre_pelicula = extraer_nombre_pelicula(archivo.name)
             metadata = obtener_metadata_pelicula(tmdb, nombre_pelicula, carpetas_imagenes, archivo, config, imagenes_existentes)
 
-            resultados["estadisticas"]["total_procesadas"] += 1  # Añadir esta línea
+            resultados["estadisticas"]["total_procesadas"] += 1
 
             if metadata:
                 resultados["estadisticas"]["encontradas"] += 1
@@ -1250,29 +1099,23 @@ def main():
                 "metadata": metadata
             })
 
-        # Usar ThreadPoolExecutor para procesar archivos en paralelo
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-            # Crear una lista de futures
             futures = [executor.submit(procesar_archivo, archivo) for archivo in archivos]
 
-            # Usar tqdm para mostrar el progreso
             with tqdm(total=len(archivos), desc=get_translation("progress", config['interface_language']), unit=get_translation("progress_file", config['interface_language'])) as pbar:
                 for future in concurrent.futures.as_completed(futures):
                     try:
-                        future.result()  # Manejar excepciones si las hay
+                        future.result()
                     except Exception as e:
                         logging.error(f"Error al procesar archivo: {e}")
                     finally:
-                        pbar.update(1)  # Actualizar la barra de progreso
+                        pbar.update(1)
 
-        # Recoger los resultados en orden
         while not resultados_queue.empty():
             resultados["metadata"].append(resultados_queue.get())
 
-        # Actualizar el archivo de metadata con los nuevos datos
         actualizar_metadata(resultados, ruta_metadata)
 
-        # Mostrar resumen con los mensajes traducidos correctamente
         print(f"\n{get_translation('operation_summary', config['interface_language'])}")
         print(f"{get_translation('file_generated', config['interface_language'])} {ruta_metadata}")
         print(f"{get_translation('total_files_processed', config['interface_language'])} {resultados['estadisticas']['total_procesadas']}")
