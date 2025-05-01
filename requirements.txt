@@ -1,5 +1,5 @@
 themoviedb
 requests
 tqdm
-python-Levenshtein
+rapidfuzz
 yt_dlp
