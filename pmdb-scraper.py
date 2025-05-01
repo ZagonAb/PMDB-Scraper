@@ -8,7 +8,7 @@ import time
 from themoviedb import TMDb
 from datetime import datetime
 from tqdm import tqdm
-import Levenshtein
+from rapidfuzz import fuzz
 import yt_dlp
 import os
 import subprocess
@@ -17,7 +17,6 @@ import concurrent.futures
 import queue
 import contextlib
 import io
-
 
 # Configurar el logging
 log_file = Path(__file__).parent / "console.log"
@@ -137,15 +136,75 @@ def get_translation(key, interface_language):
     return translation
 
 def load_config():
-    # Cargar configuración desde config.json
-    with open('config.json', 'r') as config_file:
-        config = json.load(config_file)
-        # Agregar valores por defecto si no existen
-        if 'metadata_language' not in config:
-            config['metadata_language'] = "es-ES"
-        if 'interface_language' not in config:
-            config['interface_language'] = "es-ES"
+    """Carga la configuración permitiendo barras simples en rutas de Windows"""
+    config_path = Path('config.json')
+
+    if not config_path.exists():
+        logging.error("Error: El archivo config.json no existe")
+        raise FileNotFoundError("config.json no encontrado")
+
+    try:
+        # 1. Leer el archivo como texto
+        with open(config_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        # 2. Preprocesamiento especial para Windows
+        if os.name == 'nt':  # Solo en Windows
+            # Encontrar el valor de ruta_peliculas
+            match = re.search(r'"ruta_peliculas"\s*:\s*"([^"]+)"', content)
+            if match:
+                original_path = match.group(1)
+                # Escapar las barras invertidas
+                corrected_path = original_path.replace('\\', '\\\\')
+                # Reemplazar en el contenido
+                content = content.replace(
+                    f'"ruta_peliculas": "{original_path}"',
+                    f'"ruta_peliculas": "{corrected_path}"'
+                )
+
+        # 3. Parsear el JSON
+        config = json.loads(content)
+
+        # 4. Normalizar la ruta para el sistema operativo
+        if 'ruta_peliculas' in config:
+            config['ruta_peliculas'] = str(Path(config['ruta_peliculas']))
+
+        # 5. Normalizar códigos de idioma (es-Es -> es-ES)
+        lang_fields = ['metadata_language', 'interface_language']
+        for field in lang_fields:
+            if field in config and isinstance(config[field], str):
+                parts = config[field].split('-')
+                if len(parts) == 2:
+                    config[field] = f"{parts[0].lower()}-{parts[1].upper()}"
+
         return config
+
+    except json.JSONDecodeError as e:
+        logging.error(f"Error en config.json (línea {e.lineno}): {e.msg}")
+        raise
+    except Exception as e:
+        logging.error(f"Error al cargar configuración: {str(e)}")
+        raise
+def normalizar_ruta_para_sistema(ruta, es_asset=False):
+    """
+    Normaliza una ruta para el sistema operativo actual.
+    - es_asset: True si es una ruta de imagen/video (debe ser relativa a la carpeta media)
+    """
+    if not ruta:
+        return ''
+
+    path_obj = Path(ruta)
+
+    # Determinar el separador de ruta según el SO
+    separador = '\\' if os.name == 'nt' else '/'
+
+    # Para activos (imágenes/videos), la ruta debe ser relativa a la carpeta media
+    if es_asset:
+        # Extraer solo el nombre del archivo y la subcarpeta de media
+        return f".{separador}media{separador}{path_obj.parent.name}{separador}{path_obj.name}"
+
+    # Para el archivo principal, usar solo el nombre del archivo
+    return f".{separador}{path_obj.name}"
 
 def descargar_imagen(url, ruta_destino):
     """Descarga una imagen desde una URL con timeout y reintentos."""
@@ -452,10 +511,8 @@ def obtener_metadata_pelicula(tmdb, nombre_pelicula, carpetas_imagenes, archivo_
 
             # Función para calcular la similitud entre el título del archivo y el título de la película
             def calcular_similitud(titulo_archivo, titulo_pelicula):
-                # Calcula la similitud entre dos títulos usando Levenshtein.
-                titulo_archivo = titulo_archivo.lower()
-                titulo_pelicula = titulo_pelicula.lower()
-                return Levenshtein.ratio(titulo_archivo, titulo_pelicula)
+                # Calcula la similitud entre dos títulos usando RapidFuzz
+                return fuzz.ratio(titulo_archivo.lower(), titulo_pelicula.lower()) / 100
 
             # Seleccionar candidatos que pasen los filtros iniciales
             candidatos_validos = []
@@ -996,31 +1053,29 @@ def actualizar_pelicula_manual(tmdb, pelicula, carpetas_imagenes, ruta_metadata)
         print(f"Detalles del error: {e}")
 
 def convert_json_to_txt(json_data, output_file):
-    """Convierte los datos JSON a formato txt."""
+    """Convierte los datos JSON a formato txt con rutas correctas para cada SO."""
     try:
-        # Escribir en el archivo de texto
+        # Determinar el separador de ruta según el SO
+        separador = '\\' if os.name == 'nt' else '/'
+
         with open(output_file, 'w', encoding='utf-8') as f:
             # Escribir la cabecera
             f.write("collection: Movies\n")
             f.write("shortname: movies\n")
             f.write("extension: mp4, mkv, avi, mov, wmv, flv, mpeg, ts\n")
-            f.write("launch: {command} {file.path}\n\n")
+            f.write('launch: command... {file.path}\n\n')
 
             for item in json_data["metadata"]:
                 try:
-                    # Obtener el nombre del archivo de manera segura
-                    def get_filename(path):
-                        return path.split('/')[-1] if path else ''
-
                     # Si metadata es None, usar información básica del archivo
                     if item.get('metadata') is None:
                         archivo_original = item.get('archivo_original', '')
-                        nombre_archivo = get_filename(archivo_original)
-                        nombre_base = os.path.splitext(nombre_archivo)[0]
+                        nombre_archivo = normalizar_ruta_para_sistema(archivo_original)
+                        nombre_base = os.path.splitext(Path(archivo_original).name)[0]
 
                         f.write(f"game: {nombre_base}\n")
                         f.write("file:\n")
-                        f.write(f"  ./{nombre_archivo}\n")
+                        f.write(f"  {nombre_archivo}\n")
                         f.write("developer: Unknown\n")
                         f.write("publisher: Unknown\n")
                         f.write("genre: Unknown\n")
@@ -1034,7 +1089,7 @@ def convert_json_to_txt(json_data, output_file):
                         f.write("x-resolution: Unknown\n")
                         f.write("x-aspect: Unknown\n")
                         f.write("x-audio: Unknown\n")
-                        f.write("x-classification: Unknown\n")  # Nuevo campo
+                        f.write("x-classification: Unknown\n")
                         f.write("\n")
                     else:
                         metadata = item['metadata']
@@ -1048,29 +1103,28 @@ def convert_json_to_txt(json_data, output_file):
                         fecha_lanzamiento = metadata.get('fecha_lanzamiento', '')
                         rating = int(float(metadata.get('rating', 0)) * 100)
                         x_tagline = metadata.get('x-tagline', '')
-                        x_clasification = metadata.get('x-classification', 'Unknown')  # Nuevo campo
+                        x_clasification = metadata.get('x-classification', 'Unknown')
 
-                        # Obtener la fecha de modificación del archivo
-                        if archivo_original:
+                        # Normalizar rutas
+                        archivo_normalizado = normalizar_ruta_para_sistema(archivo_original)
+                        boxfront_normalizado = normalizar_ruta_para_sistema(metadata.get('boxfront_local', ''), True)
+                        screenshot_normalizado = normalizar_ruta_para_sistema(metadata.get('screenshot_local', ''), True)
+                        wheel_normalizado = normalizar_ruta_para_sistema(metadata.get('wheel_local', ''), True)
+                        video_normalizado = normalizar_ruta_para_sistema(metadata.get('video_local', ''), True)
+
+                        # Obtener timestamp si existe
+                        x_timestamp = ""
+                        if 'x-added-date' in metadata:
                             try:
-                                mod_time = os.path.getmtime(archivo_original)
-                                x_added_timestamp = int(mod_time * 1000)
-                            except Exception as e:
-                                logging.warning(f"Error al obtener la fecha de modificación del archivo {archivo_original}: {e}")
-                                x_added_timestamp = 0
-                        else:
-                            x_added_timestamp = 0
-
-                        # Manejo de rutas de archivos
-                        boxfront_local = metadata.get('boxfront_local', '')
-                        screenshot_local = metadata.get('screenshot_local', '')
-                        wheel_local = metadata.get('wheel_local', '')
-                        video_local = metadata.get('video_local', '')
+                                fecha = datetime.strptime(metadata['x-added-date'], "%Y-%m-%d %H:%M:%S")
+                                x_timestamp = str(int(fecha.timestamp() * 1000))
+                            except:
+                                x_timestamp = ""
 
                         # Escribir metadatos
                         f.write(f"game: {titulo}\n")
                         f.write("file:\n")
-                        f.write(f"  ./{get_filename(archivo_original)}\n")
+                        f.write(f"  {archivo_normalizado}\n")
                         f.write(f"developer: {director}\n")
                         f.write(f"publisher: {productora}\n")
                         f.write(f"genre: {generos}\n")
@@ -1079,29 +1133,28 @@ def convert_json_to_txt(json_data, output_file):
                         f.write(f"release: {fecha_lanzamiento}\n")
                         f.write(f"rating: {rating}%\n")
 
-                        if boxfront_local:
-                            f.write(f"assets.boxFront: ./media/boxFront/{get_filename(boxfront_local)}\n")
-                        if screenshot_local:
-                            f.write(f"assets.screenshot: ./media/screenshot/{get_filename(screenshot_local)}\n")
-                        if wheel_local:
-                            f.write(f"assets.wheel: ./media/wheel/{get_filename(wheel_local)}\n")
-                        if video_local:
-                            f.write(f"assets.video: ./media/video/{get_filename(video_local)}\n")
+                        if boxfront_normalizado:
+                            f.write(f"assets.boxFront: {boxfront_normalizado}\n")
+                        if screenshot_normalizado:
+                            f.write(f"assets.screenshot: {screenshot_normalizado}\n")
+                        if wheel_normalizado:
+                            f.write(f"assets.wheel: {wheel_normalizado}\n")
+                        if video_normalizado:
+                            f.write(f"assets.video: {video_normalizado}\n")
 
-                        # Agregar campos técnicos
+                        # Campos técnicos
                         f.write(f"x-codec: {metadata.get('x-codec', 'Unknown')}\n")
                         f.write(f"x-resolution: {metadata.get('x-resolution', 'Unknown')}\n")
                         f.write(f"x-aspect: {metadata.get('x-aspect', 'Unknown')}\n")
                         f.write(f"x-audio: {metadata.get('x-audio', 'Unknown')}\n")
 
-                        # Agregar campos adicionales
-                        f.write(f"x-added-timestamp: {x_added_timestamp}\n")
+                        # Campos adicionales
+                        if x_timestamp:
+                            f.write(f"x-added-timestamp: {x_timestamp}\n")
                         if metadata.get('x-Duration'):
                             f.write(f"x-Duration: {metadata.get('x-Duration')}\n")
                         f.write(f"x-tagline: {x_tagline}\n")
-                        f.write(f"x-classification: {x_clasification}\n")  # Nuevo campo
-                        # f.write("x-lastPosition: 0\n")  # Descomentar si lo necesitas
-
+                        f.write(f"x-classification: {x_clasification}\n")
                         f.write("\n")
 
                 except Exception as e:
