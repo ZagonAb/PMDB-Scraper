@@ -74,16 +74,10 @@ El script intentará descargar el tráiler en los idiomas configurados, pero si 
    ```
 2. Crea y activa un entorno virtual de Python (recomendado):
 
-    ## Linux/macOS
+    ## Linux
     ```bash
     python3 -m venv venv
     source venv/bin/activate
-    ```
-    
-    ## Windows
-    ```bash
-    python -m venv venv
-    venv\Scripts\activate
     ```
     
 3. Instala las dependencias dentro del entorno virtual:
@@ -148,7 +142,7 @@ Antes de ejecutar el scraper, es importante configurar el archivo `config.json`.
         "backdrop": true,
         "logo": true,
         "fecha_lanzamiento": true,
-        "trailer": false
+        "trailer": true
     },
     "calidad_trailer": "480p",
     "trailer_lenguaje": ["en-US"],
@@ -214,6 +208,6 @@ El script genera un archivo `metadata.json` con toda la información recopilada,
 
 ## ✨ Contribuciones
 
-¡Las contribuciones son bienvenidas! Si deseas mejorar **PMDB-Scraper**, abre un **`issue`**.
+¡Las contribuciones son bienvenidas! Si deseas mejorar o tiene algun problema con **PMDB-Scraper**, abre un **`issue`**.
 
 ---
