@@ -42,6 +42,7 @@ TRANSLATIONS = {
         "results_for": "Resultados para",
         "not_available": "No disponible",
         "minutes": "minutos",
+        "cancel": "Cancelar",
         "processing_files": "Procesando {} archivos...",
         "operation_summary": "=== Resumen de la operación ===",
         "file_generated": "Archivo generado:",
@@ -85,6 +86,7 @@ TRANSLATIONS = {
         "results_for": "Results for",
         "not_available": "Not available",
         "minutes": "minutes",
+        "cancel": "Cancel",
         "processing_files": "Processing {} files...",
         "operation_summary": "=== Operation Summary ===",
         "file_generated": "Generated file:",
@@ -128,6 +130,25 @@ def get_translation(key, interface_language):
             return key
 
     return translation
+
+def eliminar_archivos_relacionados(pelicula, ruta_base):
+    try:
+        nombre_base = Path(pelicula.get("archivo_original", "")).stem
+
+        carpetas_media = ['boxFront', 'screenshot', 'wheel', 'video']
+        for carpeta in carpetas_media:
+            media_path = Path(ruta_base) / 'media' / carpeta
+            for archivo in media_path.glob(f"{nombre_base}.*"):
+                try:
+                    archivo.unlink()
+                    logging.info(f"Archivo eliminado: {archivo}")
+                except Exception as e:
+                    logging.warning(f"No se pudo eliminar {archivo}: {e}")
+
+        return True
+    except Exception as e:
+        logging.error(f"Error al eliminar archivos relacionados: {e}")
+        return False
 
 def load_config():
     config_path = Path('config.json')
@@ -747,12 +768,15 @@ def listar_peliculas(metadata_existente):
     peliculas_ordenadas = sorted(metadata_existente["metadata"], key=lambda x: x.get('nombre_extraido', '').lower())
 
     print(f"\n{get_translation('movies_available', config['interface_language'])}")
+    print(f"0. {get_translation('cancel', config['interface_language'])}")
     for i, item in enumerate(peliculas_ordenadas):
         print(f"{i + 1}. {item.get('nombre_extraido', get_translation('unknown', config['interface_language']))} "
               f"({get_translation('file', config['interface_language'])}: "
               f"{item.get('archivo_original', get_translation('unknown', config['interface_language']))})")
 
     seleccion = input(f"\n{get_translation('select_movie', config['interface_language'])}")
+    if seleccion == '0':
+        return None
     if seleccion.isdigit() and 0 < int(seleccion) <= len(peliculas_ordenadas):
         return peliculas_ordenadas[int(seleccion) - 1]
     return None
@@ -761,13 +785,38 @@ def actualizar_pelicula_manual(tmdb, pelicula, carpetas_imagenes, ruta_metadata)
     nombre_pelicula = pelicula.get("nombre_extraido", "Desconocido")
     archivo_video = Path(pelicula.get("archivo_original", ""))
     info_tecnica = obtener_info_tecnica(archivo_video)
+
+    logging.info(f"Eliminando archivos relacionados para: {nombre_pelicula}")
+    nombre_base = archivo_video.stem
+
+    for tipo, carpeta in carpetas_imagenes.items():
+        for archivo in carpeta.glob(f"{nombre_base}.*"):
+            try:
+                archivo.unlink()
+                logging.info(f"Archivo eliminado: {archivo}")
+            except Exception as e:
+                logging.warning(f"No se pudo eliminar {archivo}: {e}")
+
+    metadata_existente = cargar_metadata_existente(ruta_metadata)
+    if metadata_existente and "metadata" in metadata_existente:
+        metadata_existente["metadata"] = [
+            item for item in metadata_existente["metadata"]
+            if item.get("archivo_original") != str(archivo_video)
+        ]
+
+        with open(ruta_metadata, 'w', encoding='utf-8') as f:
+            json.dump(metadata_existente, f, ensure_ascii=False, indent=2)
+
+        ruta_txt = ruta_metadata.with_suffix('.txt')
+        convert_json_to_txt(metadata_existente, ruta_txt)
+
     print(f"\n{get_translation('updating_metadata_for', config['interface_language'])}: {nombre_pelicula}")
-    tmdb.language = config['metadata_language']
+    tmdb.language = config['metadata_language'][0]
     resultados = tmdb.search().movies(nombre_pelicula)
 
     if not resultados:
         for idioma in config['idiomas']:
-            if idioma != config['metadata_language']:
+            if idioma != config['metadata_language'][0]:
                 tmdb.language = idioma
                 resultados_alt = tmdb.search().movies(nombre_pelicula)
                 if resultados_alt:
@@ -780,7 +829,7 @@ def actualizar_pelicula_manual(tmdb, pelicula, carpetas_imagenes, ruta_metadata)
     print(f"\n{get_translation('results_for', config['interface_language'])} '{nombre_pelicula}':")
     print("\n" + "="*100)
 
-    tmdb.language = config['metadata_language']
+    tmdb.language = config['metadata_language'][0]
 
     for i, resultado in enumerate(resultados):
         try:
@@ -832,7 +881,7 @@ def actualizar_pelicula_manual(tmdb, pelicula, carpetas_imagenes, ruta_metadata)
         pelicula_seleccionada = resultados[int(seleccion) - 1]
         pelicula_id = pelicula_seleccionada.id
         clasificacion = obtener_clasificacion_mpa(tmdb, pelicula_id)
-        tmdb.language = config['metadata_language']
+        tmdb.language = config['metadata_language'][0]
         pelicula = tmdb.movie(pelicula_id).details(append_to_response="credits,images,videos")
         imagenes = tmdb.movie(pelicula_id).images()
         nombre_base = archivo_video.stem
@@ -851,17 +900,33 @@ def actualizar_pelicula_manual(tmdb, pelicula, carpetas_imagenes, ruta_metadata)
                 screenshot_local = str(backdrop_path) + Path(backdrop_url).suffix
 
         if config['obtener_datos']['logo'] and hasattr(imagenes, 'logos') and imagenes.logos:
-            logo_url = f"https://image.tmdb.org/t/p/original{imagenes.logos[0].file_path}"
-            logo_path = carpetas_imagenes['wheel'] / nombre_base
-            if descargar_imagen(logo_url, logo_path):
-                wheel_local = str(logo_path) + Path(logo_url).suffix
+            logos_ordenados = []
+            metadata_lang = config['metadata_language'][0].split('-')[0]
+            logos_primary = [logo for logo in imagenes.logos if logo.iso_639_1 == metadata_lang]
+            if logos_primary:
+                logos_ordenados.extend(logos_primary)
 
-        video_local = None
+            if not logos_ordenados and metadata_lang != 'en':
+                logos_en = [logo for logo in imagenes.logos if logo.iso_639_1 == 'en']
+                logos_ordenados.extend(logos_en)
+
+            if not logos_ordenados:
+                logos_null = [logo for logo in imagenes.logos if logo.iso_639_1 is None]
+                logos_ordenados.extend(logos_null)
+
+            if not logos_ordenados and imagenes.logos:
+                logos_ordenados = [imagenes.logos[0]]
+
+            if logos_ordenados:
+                logo_url = f"https://image.tmdb.org/t/p/original{logos_ordenados[0].file_path}"
+                logo_path = carpetas_imagenes['wheel'] / nombre_base
+                if descargar_imagen(logo_url, logo_path):
+                    wheel_local = str(logo_path) + Path(logo_url).suffix
+
         if config['obtener_datos']['trailer']:
             video_path = carpetas_imagenes['video'] / nombre_base
             if descargar_trailer(tmdb, pelicula_id, video_path, config['calidad_trailer']):
                 video_local = str(video_path) + ".mp4"
-
             else:
                 logging.warning(f"{get_translation('trailer_no_downloaded', config['interface_language'])} {nombre_pelicula}")
 
@@ -881,7 +946,7 @@ def actualizar_pelicula_manual(tmdb, pelicula, carpetas_imagenes, ruta_metadata)
             'video_local': video_local,
             'tmdb_id': pelicula_id,
             'fecha_lanzamiento': str(pelicula.release_date) if pelicula.release_date else None,
-            'idioma_metadata': config['metadata_language'],
+            'idioma_metadata': ", ".join(config['metadata_language']),
             'x-classification': clasificacion if clasificacion else "Desconocido",
             'x-added-date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             'x-codec': info_tecnica['x-codec'],
@@ -891,18 +956,45 @@ def actualizar_pelicula_manual(tmdb, pelicula, carpetas_imagenes, ruta_metadata)
         }
 
         metadata_existente = cargar_metadata_existente(ruta_metadata)
-        for item in metadata_existente["metadata"]:
-            if item.get("archivo_original") == str(archivo_video):
-                item.update({
-                    "tipo": "pelicula",
-                    "archivo_original": str(archivo_video),
-                    "nombre_extraido": nombre_pelicula,
-                    "metadata": nuevos_metadatos
-                })
-                break
+        if not metadata_existente:
+            metadata_existente = {
+                "metadata": [],
+                "errores": [],
+                "timestamp": datetime.now().isoformat(),
+                "estadisticas": {
+                    "total_procesadas": 0,
+                    "encontradas": 0,
+                    "no_encontradas": 0,
+                    "imagenes_descargadas": {
+                        "boxfront": 0,
+                        "screenshot": 0,
+                        "wheel": 0
+                    },
+                    "trailers_descargados": 0
+                }
+            }
+
+        metadata_existente["metadata"].append({
+            "tipo": "pelicula",
+            "archivo_original": str(archivo_video),
+            "nombre_extraido": nombre_pelicula,
+            "metadata": nuevos_metadatos
+        })
+
+        metadata_existente["estadisticas"]["total_procesadas"] += 1
+        metadata_existente["estadisticas"]["encontradas"] += 1
+        if boxfront_local:
+            metadata_existente["estadisticas"]["imagenes_descargadas"]["boxfront"] += 1
+        if screenshot_local:
+            metadata_existente["estadisticas"]["imagenes_descargadas"]["screenshot"] += 1
+        if wheel_local:
+            metadata_existente["estadisticas"]["imagenes_descargadas"]["wheel"] += 1
+        if video_local:
+            metadata_existente["estadisticas"]["trailers_descargados"] += 1
 
         with open(ruta_metadata, 'w', encoding='utf-8') as f:
             json.dump(metadata_existente, f, ensure_ascii=False, indent=2)
+
         ruta_txt = ruta_metadata.with_suffix('.txt')
         convert_json_to_txt(metadata_existente, ruta_txt)
 
