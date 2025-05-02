@@ -10,6 +10,9 @@ Pegasus Movie Data Base Scraper (PMDB-Scraper) es una herramienta diseñada para
 ![screen1](https://github.com/ZagonAb/PMDB-Scraper/blob/98e992cf3b4fc97f58b3a31d618951a404c8a30b/.screenshot/screen1.png)
 ![screen2](https://github.com/ZagonAb/PMDB-Scraper/blob/98e992cf3b4fc97f58b3a31d618951a404c8a30b/.screenshot/screen2.png)
 
+## ⚠️ Aviso
+Este producto utiliza la API de TMDb pero **no está respaldado ni certificado** por TMDb. Los datos de películas se proporcionan bajo los [Términos de Uso de TMDb](https://www.themoviedb.org/documentation/api/terms-of-use).
+
 ## ⚡ Características
 - 🌍 Soporte de idiomas, español e inglés para el script desde `config.json`
 - ✅ Obtiene metadatos de películas desde **TMDB** (título, director, género, sinopsis, etc.).
@@ -203,8 +206,10 @@ El script genera un archivo `metadata.json` con toda la información recopilada,
 
 ## ⚖️ Licencia
 
-🔗 Este proyecto está bajo la [(CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/)
----
+Este proyecto está bajo la [GNU Affero General Public License v3.0](https://www.gnu.org/licenses/agpl-3.0.html).  
+
+**Atribución requerida:**  
+Utiliza la API de [TMDb](https://www.themoviedb.org/) bajo sus [Términos de Uso](https://www.themoviedb.org/documentation/api/terms-of-use).
 
 ## ✨ Contribuciones
 
