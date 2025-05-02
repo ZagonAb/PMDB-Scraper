@@ -83,7 +83,7 @@ El script intentará descargar el tráiler en los idiomas configurados, pero si 
     source venv/bin/activate
     ```
     
-- **En entornos Windows, puede omitir la creación de un entorno virtual e instalar directamente las dependencias necesarias.**
+- **En Windows, puede omitir la creación de un entorno virtual e instalar directamente las dependencias necesarias.**
     
 3. Instala las dependencias dentro del entorno virtual:
     ```bash
