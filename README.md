@@ -108,7 +108,7 @@ Para utilizar PMDB-Scraper, necesitas una clave API de **The Movie Database (TMD
 
 Antes de ejecutar el scraper, es importante configurar el archivo `config.json`. Algunos de los parámetros clave son:
 
-- **`api_key`**: Clave de API de TMDB (requerida). Obtén una en [TMDB](https://www.themoviedb.org/settings/api).
+- **`api_key`**: Clave API de TMDB (requerida). Obtén una en [TMDB](https://www.themoviedb.org/settings/api).
 - **`ruta_peliculas`**: Ruta absoluta a la carpeta con archivos de video (ej: `/ruta/a/peliculas`).
 - **`idiomas`**: Lista de idiomas para búsqueda (orden priorizado). Ej: `["es-ES", "es-MX", "en-US"]`.
 - **`metadata_language`**: Idiomas para metadatos (orden priorizado).
