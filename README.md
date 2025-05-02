@@ -208,9 +208,6 @@ El script genera un archivo `metadata.json` con toda la información recopilada,
 
 Este proyecto está bajo la [GNU Affero General Public License v3.0](https://www.gnu.org/licenses/agpl-3.0.html).  
 
-**Atribución requerida:**  
-Utiliza la API de [TMDb](https://www.themoviedb.org/) bajo sus [Términos de Uso](https://www.themoviedb.org/documentation/api/terms-of-use).
-
 ## ✨ Contribuciones
 
 ¡Las contribuciones son bienvenidas! Si deseas mejorar o tiene algun problema con **PMDB-Scraper**, abre un **`issue`**.
