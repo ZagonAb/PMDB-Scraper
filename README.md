@@ -91,9 +91,9 @@ El script intentará descargar el tráiler en los idiomas configurados, pero si 
 ## ⚠️ Requisito Previo: FFmpeg
 Antes de ejecutar el script, asegúrate de tener **FFmpeg** instalado en tu sistema. Sin él, el script no podrá extraer información técnica de los archivos de video.
     
-    ```bash 
-    sudo apt-get update && sudo apt-get install ffmpeg 
-    ```    
+```bash
+sudo apt-get update && sudo apt-get install ffmpeg
+```    
 
 - **Windows: Descarga los binarios de FFmpeg y agrega la carpeta bin a tu variable de entorno PATH.** 
     
