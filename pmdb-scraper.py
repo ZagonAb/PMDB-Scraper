@@ -787,14 +787,57 @@ def listar_peliculas(metadata_existente):
         logging.error(get_translation("no_metadata", config['interface_language']))
         return None
 
+    # Configurar colores para la terminal
+    class Colors:
+        RED = '\033[91m'
+        GREEN = '\033[92m'
+        YELLOW = '\033[93m'
+        BLUE = '\033[94m'
+        END = '\033[0m'
+
+    # Verificar si la terminal soporta colores (evitar errores en entornos sin color)
+    try:
+        import sys
+        from termios import TIOCGWINSZ
+        import fcntl
+        import struct
+        supports_color = True
+    except:
+        supports_color = False
+
     peliculas_ordenadas = sorted(metadata_existente["metadata"], key=lambda x: x.get('nombre_extraido', '').lower())
 
     print(f"\n{get_translation('movies_available', config['interface_language'])}")
     print(f"0. {get_translation('cancel', config['interface_language'])}")
+
     for i, item in enumerate(peliculas_ordenadas):
-        print(f"{i + 1}. {item.get('nombre_extraido', get_translation('unknown', config['interface_language']))} "
+        nombre = item.get('nombre_extraido', get_translation('unknown', config['interface_language']))
+        archivo = item.get('archivo_original', get_translation('unknown', config['interface_language']))
+
+        # Determinar si tiene metadatos completos
+        tiene_metadatos = item.get('metadata') is not None and any([
+            item['metadata'].get('titulo_tmdb'),
+            item['metadata'].get('descripcion'),
+            item['metadata'].get('director')
+        ])
+
+        # Formatear la salida según si tiene metadatos
+        if supports_color:
+            color = Colors.RED if not tiene_metadatos else Colors.GREEN
+            reset = Colors.END
+        else:
+            color = ""
+            reset = ""
+            if not tiene_metadatos:
+                nombre = f"[SIN METADATA] {nombre}"
+
+        print(f"{i + 1}. {color}{nombre}{reset} "
               f"({get_translation('file', config['interface_language'])}: "
-              f"{item.get('archivo_original', get_translation('unknown', config['interface_language']))})")
+              f"{archivo})")
+
+        # Mostrar información adicional si no tiene metadatos
+        if not tiene_metadatos and supports_color:
+            print(f"   {Colors.YELLOW}⚠ No se encontraron metadatos para esta película{Colors.END}")
 
     seleccion = input(f"\n{get_translation('select_movie', config['interface_language'])}")
     if seleccion == '0':
