@@ -27,122 +27,98 @@ Esta herramienta utiliza la API de [TMDb](https://www.themoviedb.org/) (The Movi
 - 🚫 Opción de ejecución manual (requiere de metadata.json previamente generado.)
 - ⏳ Reintentos automáticos para descargas fallidas.
 
-## Consejos:
-
-- El script extrae el año incluido en los títulos de los archivos y lo usa para mejorar la precisión de la búsqueda en TMDB. Si el año está presente en el nombre del archivo, el script lo extrae y lo compara con los años de lanzamiento de las películas en los resultados de búsqueda. Esto ayuda a seleccionar la película correcta en casos donde hay múltiples coincidencias con títulos similares.
-
-- ⚠️ Es posible que The Movie Database (TMDB) no encuentre algunos títulos por varias razones. Aquí te explico algunas causas comunes:
-
-Errores ortográficos o de formato: Si el título de la película está mal escrito o tiene un formato incorrecto, TMDB puede no encontrarlo. Asegúrate de escribir el título correctamente y en el idioma original si es necesario.
-
-Títulos en diferentes idiomas: Algunas películas tienen títulos diferentes en otros idiomas. Si buscas un título traducido, es posible que no aparezca. Intenta buscar el título en su idioma original o un titulo traducido oficialmente.
-
-Contenido no disponible en la base de datos: TMDB es una base de datos colaborativa, por lo que no todos los títulos están registrados. Si es una película muy nueva, antigua o poco conocida, es posible que no esté en la base de datos.
-
-Problemas con la API o la búsqueda: al conectarse a TMDB a través de su API, puede haber problemas técnicos o limitaciones en la búsqueda.
-
-Restricciones regionales: Algunos títulos pueden estar disponibles solo en ciertas regiones debido a licencias o derechos de distribución. Esto puede afectar los resultados de búsqueda.
-
-Es importante tener un orden consistente en los títulos de los archivos de video para asegurar que el script pueda encontrar la película deseada de manera efectiva. Si los títulos no siguen un formato adecuado, puede ser difícil identificar la película correctamente.
-
-- Ejemplo de formato adecuado de títulos:
-
-- **Die Hard (1988)** (Titilo original + año)
-- **Duro de matar (1988)** (titulo traducido oficialmente + año)
-
-Si sigues este tipo de formato, será más fácil encontrar y raspar los metadatos de las películas de manera precisa.
-
-- ⚠️ Limitaciones en la Descarga de Tráilers:
-
-Al descargar tráilers de YouTube, es posible que encuentres algunas limitaciones debido a restricciones impuestas por la plataforma. Estas limitaciones pueden incluir:
-
-Videos no disponibles en tu país: Algunos tráilers pueden estar bloqueados geográficamente y no estar disponibles en tu región.
-
-Videos eliminados: Algunos tráilers pueden haber sido eliminados por el propietario del contenido o por incumplimiento de las políticas de YouTube.
-
-Restricciones de edad: Algunos tráilers pueden requerir que el usuario inicie sesión en YouTube para confirmar su edad.
-
-Derechos de autor: Algunos tráilers pueden estar bloqueados debido a reclamos de derechos de autor.
-
-El script intentará descargar el tráiler en los idiomas configurados, pero si encuentra alguna de estas limitaciones, simplemente omitirá ese tráiler y continuará con el siguiente. Esto no afectará la descarga de otros metadatos (como imágenes, descripciones, etc.), pero el tráiler no estará disponible.
-
 ---
 
-## 🛠 Instalación
+## 🛠️ Instalación y Requisitos
 
-1. Clona este repositorio o descárgalo manualmente:
+### 1. Clonar el repositorio
 
-   ```sh
-    git git@github.com:ZagonAb/PMDB-Scraper.git
-   ```
-      
-   ```sh
-    cd PMDB-Scraper-main
-   ```
-2. Crea y activa un entorno virtual de Python (recomendado):
+```sh
+git clone git@github.com:ZagonAb/PMDB-Scraper.git
+cd PMDB-Scraper
+```
 
-    ## Linux
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate
-    ```
-- **En Windows, puede omitir la creación de un entorno virtual e instalar directamente las dependencias necesarias.**
+### 2. Requisitos previos
 
-## ⚠️ Requisito Previo: FFmpeg
-Antes de ejecutar el script, asegúrate de tener **FFmpeg** instalado en tu sistema. Sin él, el script no podrá extraer información técnica de los archivos de video.
-    
+#### FFmpeg (Requerido en todos los sistemas)
+FFmpeg es necesario para extraer información técnica de los archivos de video.
+
+##### Instalación en Linux:
 ```bash
 sudo apt-get update && sudo apt-get install ffmpeg
 ```
 
-### 🖥️ Instalación en Windows
-- Descarga FFmpeg desde [ffmpeg](https://ffmpeg.org/download.html).
-- Extrae el ZIP y copia la ruta de la carpeta `bin` (ej: `C:\ffmpeg\bin`).
-- Busca "Variables de entorno" en el menú de Windows > Editar variables del sistema > `PATH` > Agregar la ruta del `bin`.
-- Verifica en PowerShell: `ffmpeg -version`.
+##### Instalación en Windows:
+1. Descarga FFmpeg desde [ffmpeg.org](https://ffmpeg.org/download.html)
+2. Extrae el archivo ZIP
+3. Copia la ruta de la carpeta `bin` (ejemplo: `C:\ffmpeg\bin`)
+4. Agrega la ruta a las variables de entorno PATH:
+   - Busca "Variables de entorno" en el menú de Windows
+   - Edita las variables del sistema
+   - Selecciona "PATH" y haz clic en "Editar"
+   - Agrega la ruta a la carpeta `bin` de FFmpeg
+5. Verifica la instalación abriendo PowerShell y ejecutando:
+   ```
+   ffmpeg -version
+   ```
 
-    
-3. Instala las dependencias dentro del entorno virtual:
-    ```bash
-    pip install -r requirements.txt
-    ```
-4. Configura tu archivo `config.json` según tus necesidades. **TMDB** utiliza los códigos de idioma basados en el estándar ISO 639-1 (códigos de dos letras, como es para español o en para inglés). En muchos casos, estos códigos se combinan con códigos de país según el estándar ISO 3166-1 para formar códigos como es-ES (español de España), es-MX (español Mexico), en-US (english United States) o pt-BR (portugués de Brasil) etc...
+### 3. Dependencias de Python
 
----
+#### En Linux:
+1. Crea y activa un entorno virtual (recomendado):
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+2. Instala las dependencias:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-## 🔑 Cómo obtener una clave API de TMDB
+#### En Windows:
+**En Windows, puede omitir la creación de un entorno virtual e instalar directamente las dependencias necesarias.**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-Para utilizar PMDB-Scraper, necesitas una clave API de **The Movie Database (TMDB)**. Sigue estos pasos:
+### 4. Configuración API de TMDB
 
-1. Crea una cuenta en [TMDB](https://www.themoviedb.org/).
-2. Accede a tu perfil y ve a la sección **Configuración > API**.
-3. Crea una nueva clave API y cópiala en `config.json` bajo la clave `"api_key"`.
+Para utilizar PMDB-Scraper, necesitas una clave API de **The Movie Database (TMDB)**:
+
+1. Crea una cuenta en [TMDB](https://www.themoviedb.org/)
+2. Accede a tu perfil y ve a la sección **Configuración > API**
+3. Crea una nueva clave API y cópiala en el archivo `config.json` bajo la clave `"api_key"`
+
+### 5. Ejecutar el script
+
+```bash
+python pmdb-scraper.py
+```
 
 ---
 
 ## 📂 Configuración (`config.json`)
 
-Antes de ejecutar el scraper, es importante configurar el archivo `config.json`. Algunos de los parámetros clave son:
+Antes de ejecutar el scraper, configura el archivo `config.json` con los siguientes parámetros:
 
-- **`api_key`**: Clave API de TMDB (requerida). Obtén una en [TMDB](https://www.themoviedb.org/settings/api).
-- **`ruta_peliculas`**: Ruta absoluta a la carpeta con archivos de video (ej: `/ruta/a/peliculas`).
-- **`idiomas`**: Lista de idiomas para búsqueda (orden priorizado). Ej: `["es-ES", "es-MX", "en-US"]`.
-- **`metadata_language`**: Idiomas para metadatos (orden priorizado).
-- **`obtener_datos`**: Objetivo con campos booleanos para activar/desactivar metadatos.
-- **`calidad_trailer`**: Calidad del tráiler (`480p`, `720p` etc..).
-- **`timeout_descargas`**: Tiempo máximo (segundos) para descargas.
-- **`max_reintentos`**: **Número máximo de intentos** si una descarga falla (ej: `3`).
-- **`actualizar_manual`**: Esta opción solo funcionará si previamente ha obtenido metadatos y desea actualizar aquellas películas que no fueron encontradas o que contienen metadatos erróneos. `actualizar_manual` en (`true`), el script le permite seleccionar manualmente la película de su archivo metadata.json para ofrecerle múltiples coincidencias y pueda actualizar los metadatos correctamente, automáticamente recreará metadata.txt
+- **`api_key`**: Clave API de TMDB (requerida)
+- **`ruta_peliculas`**: Ruta absoluta a la carpeta con archivos de video (ej: `/ruta/a/peliculas`)
+- **`idiomas`**: Lista de idiomas para búsqueda (orden priorizado). Ej: `["es-ES", "es-MX", "en-US"]`
+- **`metadata_language`**: Idiomas para metadatos (orden priorizado)
+- **`obtener_datos`**: Campos booleanos para activar/desactivar tipos de metadatos
+- **`calidad_trailer`**: Calidad del tráiler (`480p`, `720p` etc.)
+- **`timeout_descargas`**: Tiempo máximo (segundos) para descargas
+- **`max_reintentos`**: Número máximo de intentos si una descarga falla (ej: `3`)
+- **`actualizar_manual`**: Para actualizar manualmente películas con metadatos erróneos o faltantes
 
-**Si el tráiler no está disponible en el idioma principal configurado en `trailer_lenguaje`, buscará automáticamente en otros idiomas en el orden en que están listados.**
-- Ejemplo: `"trailer_lenguaje": ["es-MX", "en-US"]` Este es mi caso, ya que no todos los trailers siempre están en español.
+**Notas sobre la configuración de idiomas:**
+- Para el `trailer_lenguaje`, si el tráiler no está disponible en el idioma principal, buscará automáticamente en los siguientes idiomas listados
+  - Ejemplo: `"trailer_lenguaje": ["es-MX", "en-US"]`
+- En `idiomas`, configure según el idioma de sus títulos de películas
+  - Ejemplo: `"idiomas": ["es-MX", "es-ES", "en-US"]` si tiene mezcla de títulos en español e inglés
 
-**En `"idiomas":` es algo similar, en mi caso los títulos de las películas en mi colección no son 100% en español, también tengo películas en ingles con títulos en ingles así que requiero de una configuración algo mas que** `es-MX`
-- Ejemplo: **"idiomas": ["es-MX", "es-ES", "en-US"]**
-
-# Si no quiere algunos de los datos solo cambie de true a false.
+**Ejemplo de configuración:**
 ```json
-
 {
     "api_key": "YOUR_TMDB_API_KEY",
     "ruta_peliculas": "ROUTE/WHERE/ARE/YOUR/MOVIES",
@@ -173,18 +149,35 @@ Antes de ejecutar el scraper, es importante configurar el archivo `config.json`.
     "actualizar_manual": false
 }
 ```
-- Una vez teminada la configuracion del archivo `config.json`
-- Ejecuta el script principal `pmdb-scraper.py`
 
-```sh
-python3 pmdb-scraper.py
-```
 ---
 
+## 📝 Consejos para mejor funcionamiento
 
-## 📂 Estructura de directorio creada
+- **Formato de nombres de archivos**: El script extrae el año incluido en los títulos de los archivos para mejorar la precisión de búsqueda. Se recomienda usar estos formatos:
+  - `Die Hard (1988)` (Título original + año)
+  - `Duro de matar (1988)` (Título traducido oficialmente + año)
 
-Cuando se ejecuta PMDB-Scraper, se genera la siguiente estructura de directorios dentro de la carpeta de películas:
+- **⚠️ Razones por las que TMDB podría no encontrar algunos títulos:**
+  - Errores ortográficos o de formato en el nombre del archivo
+  - Títulos en diferentes idiomas (intente usar el título original)
+  - Contenido no disponible en la base de datos de TMDB
+  - Problemas con la API o limitaciones en la búsqueda
+  - Restricciones regionales por licencias o derechos de distribución
+
+- **⚠️ Limitaciones en la descarga de tráilers:**
+  - Videos no disponibles en su país (bloqueo geográfico)
+  - Videos eliminados por el propietario o por incumplimiento de políticas
+  - Restricciones de edad que requieren inicio de sesión
+  - Bloqueos por derechos de autor
+
+  El script omitirá los tráilers con problemas y continuará con el resto de metadatos.
+
+---
+
+## 📂 Estructura de directorios creada
+
+Al ejecutar PMDB-Scraper, se generará la siguiente estructura dentro de la carpeta de películas:
 
 ```
 /media
@@ -195,7 +188,8 @@ Cuando se ejecuta PMDB-Scraper, se genera la siguiente estructura de directorios
 ```
 
 ---
-## 🎯 Ejemplo de Salida
+
+## 🎯 Ejemplo de salida
 
 ```sh
 === Resumen de la Operación ===
@@ -210,23 +204,28 @@ Películas no encontradas: 2
 - Logos: 5
 - Tráilers descargados: 6
 ```
+
 ## 📄 Generación de archivos
 
 El script genera un archivo `metadata.json` con toda la información recopilada, que es necesario para:
 
-1. Exportar los datos a Pegasus Frontend.
-2. Utilizar la función `actualizar_manual` en futuras ejecuciones.
-3. Una vez obtenidos los metadatos, si desea modificar el archivo `metadata.txt `, se recomienda realizar los mismos cambios en el archivo  `metadata.json` para mantener la consistencia entre ambos archivos en futuras extracciones de metadatos.
+1. Exportar los datos a Pegasus Frontend
+2. Utilizar la función `actualizar_manual` en futuras ejecuciones
+3. Si desea modificar el archivo `metadata.txt`, se recomienda realizar los mismos cambios en el archivo `metadata.json` para mantener la consistencia en futuras extracciones
+
 ---
 
-## [(PMDB-Theme)](https://github.com/ZagonAb/PMDB-Theme) Interfaz diseñada específicamente para resaltar estos metadatos.
+## [(PMDB-Theme)](https://github.com/ZagonAb/PMDB-Theme) 
+Interfaz diseñada específicamente para resaltar estos metadatos.
+
 ---
 
 ## ⚖️ Licencia
 
-Este proyecto está bajo la [GNU Affero General Public License v3.0](https://www.gnu.org/licenses/agpl-3.0.html).  
+Este proyecto está bajo la [GNU Affero General Public License v3.0](https://www.gnu.org/licenses/agpl-3.0.html).
 
 ## ✨ Contribuciones
 
-¡Las contribuciones son bienvenidas! Si deseas mejorar o tiene algun problema con **PMDB-Scraper**, abre un **`issue`**.
+¡Las contribuciones son bienvenidas! Si deseas mejorar o tienes algún problema con **PMDB-Scraper**, abre un **`issue`**.
+
 ---
