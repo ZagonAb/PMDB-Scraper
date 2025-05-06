@@ -616,7 +616,6 @@ def obtener_metadata_pelicula(tmdb, nombre_pelicula, carpetas_imagenes, archivo_
                 else:
                     logging.warning(f"No se encontró logo para la película: {nombre_pelicula} (Archivo: {archivo_video.name})")
 
-            # Descargar tráiler
             if not video_local and config['obtener_datos']['trailer']:
                 video_path = carpetas_imagenes['video'] / nombre_base
                 if descargar_trailer(tmdb, pelicula_id, video_path, config['calidad_trailer']):
