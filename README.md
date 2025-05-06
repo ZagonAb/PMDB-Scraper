@@ -93,8 +93,13 @@ El script intentará descargar el tráiler en los idiomas configurados, pero si 
     ```bash
     pip install -r requirements.txt
     ```
+    ```bash 
+    sudo apt-get update && sudo apt-get install ffmpeg 
+    ```
+    
+4. - **Windows: Descarga los binarios de FFmpeg y agrega la carpeta bin a tu variable de entorno PATH.** 
 
-4. Configura tu archivo `config.json` según tus necesidades. **TMDB** utiliza los códigos de idioma basados en el estándar ISO 639-1 (códigos de dos letras, como es para español o en para inglés). En muchos casos, estos códigos se combinan con códigos de país según el estándar ISO 3166-1 para formar códigos como es-ES (español de España), es-MX (español Mexico), en-US (english United States) o pt-BR (portugués de Brasil) etc...
+5. Configura tu archivo `config.json` según tus necesidades. **TMDB** utiliza los códigos de idioma basados en el estándar ISO 639-1 (códigos de dos letras, como es para español o en para inglés). En muchos casos, estos códigos se combinan con códigos de país según el estándar ISO 3166-1 para formar códigos como es-ES (español de España), es-MX (español Mexico), en-US (english United States) o pt-BR (portugués de Brasil) etc...
 
 ---
 
