@@ -787,7 +787,6 @@ def listar_peliculas(metadata_existente):
         logging.error(get_translation("no_metadata", config['interface_language']))
         return None
 
-    # Configurar colores para la terminal
     class Colors:
         RED = '\033[91m'
         GREEN = '\033[92m'
@@ -795,7 +794,6 @@ def listar_peliculas(metadata_existente):
         BLUE = '\033[94m'
         END = '\033[0m'
 
-    # Verificar si la terminal soporta colores (evitar errores en entornos sin color)
     try:
         import sys
         from termios import TIOCGWINSZ
@@ -814,14 +812,12 @@ def listar_peliculas(metadata_existente):
         nombre = item.get('nombre_extraido', get_translation('unknown', config['interface_language']))
         archivo = item.get('archivo_original', get_translation('unknown', config['interface_language']))
 
-        # Determinar si tiene metadatos completos
         tiene_metadatos = item.get('metadata') is not None and any([
             item['metadata'].get('titulo_tmdb'),
             item['metadata'].get('descripcion'),
             item['metadata'].get('director')
         ])
 
-        # Formatear la salida según si tiene metadatos
         if supports_color:
             color = Colors.RED if not tiene_metadatos else Colors.GREEN
             reset = Colors.END
@@ -835,7 +831,6 @@ def listar_peliculas(metadata_existente):
               f"({get_translation('file', config['interface_language'])}: "
               f"{archivo})")
 
-        # Mostrar información adicional si no tiene metadatos
         if not tiene_metadatos and supports_color:
             print(f"   {Colors.YELLOW}⚠ No se encontraron metadatos para esta película{Colors.END}")
 
