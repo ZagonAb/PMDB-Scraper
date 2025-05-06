@@ -96,7 +96,7 @@ sudo apt-get update && sudo apt-get install ffmpeg
 ```
 
 ### 🖥️ Instalación en Windows
-- Descarga FFmpeg desde [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html).
+- Descarga FFmpeg desde [ffmpeg](https://ffmpeg.org/download.html).
 - Extrae el ZIP y copia la ruta de la carpeta `bin` (ej: `C:\ffmpeg\bin`).
 - Busca "Variables de entorno" en el menú de Windows > Editar variables del sistema > `PATH` > Agregar la ruta del `bin`.
 - Verifica en PowerShell: `ffmpeg -version`.
@@ -229,5 +229,4 @@ Este proyecto está bajo la [GNU Affero General Public License v3.0](https://www
 ## ✨ Contribuciones
 
 ¡Las contribuciones son bienvenidas! Si deseas mejorar o tiene algun problema con **PMDB-Scraper**, abre un **`issue`**.
-
 ---
