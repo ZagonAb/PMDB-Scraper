@@ -93,9 +93,14 @@ Antes de ejecutar el script, asegúrate de tener **FFmpeg** instalado en tu sist
     
 ```bash
 sudo apt-get update && sudo apt-get install ffmpeg
-```    
+```
 
-- **Windows: Descarga los binarios de FFmpeg y agrega la carpeta bin a tu variable de entorno PATH.** 
+### 🖥️ Instalación en Windows
+- Descarga FFmpeg desde [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html).
+- Extrae el ZIP y copia la ruta de la carpeta `bin` (ej: `C:\ffmpeg\bin`).
+- Busca "Variables de entorno" en el menú de Windows > Editar variables del sistema > `PATH` > Agregar la ruta del `bin`.
+- Verifica en PowerShell: `ffmpeg -version`.
+
     
 3. Instala las dependencias dentro del entorno virtual:
     ```bash
