@@ -76,7 +76,7 @@ sudo apt-get update && sudo apt-get install ffmpeg
    ```
 
 #### En Windows:
-**En Windows, puede omitir la creación de un entorno virtual e instalar directamente las dependencias necesarias.**
+**Puede omitir la creación de un entorno virtual e instalar directamente las dependencias necesarias.**
    ```bash
    pip install -r requirements.txt
    ```
