@@ -446,6 +446,7 @@ def obtener_metadata_pelicula(tmdb, nombre_pelicula, carpetas_imagenes, archivo_
             screenshot_local = imagenes_existentes.get('screenshot') if imagenes_existentes else None
             wheel_local = imagenes_existentes.get('wheel') if imagenes_existentes else None
             video_local = imagenes_existentes.get('video') if imagenes_existentes else None
+
             año_archivo = None
             año_match = re.search(r'\((\d{4})\)', archivo_video.name)
             if año_match:
@@ -453,13 +454,18 @@ def obtener_metadata_pelicula(tmdb, nombre_pelicula, carpetas_imagenes, archivo_
                 nombre_sin_año = re.sub(r'\s*\(\d{4}\)', '', nombre_pelicula).strip()
             else:
                 nombre_sin_año = nombre_pelicula
+
             todos_resultados = []
 
             for idioma in config['idiomas']:
                 tmdb.language = idioma
-                resultados = tmdb.search().movies(nombre_sin_año)
-                if resultados:
-                    todos_resultados.extend(resultados)
+                try:
+                    resultados = tmdb.search().movies(nombre_sin_año)
+                    if resultados:
+                        todos_resultados.extend(resultados)
+                except Exception as e:
+                    logging.warning(f"Error al buscar en idioma {idioma}: {str(e)}")
+                    continue
 
             if not todos_resultados:
                 logging.warning(f"No se encontró información para la película: {nombre_pelicula} (Archivo: {archivo_video.name})")
@@ -467,26 +473,32 @@ def obtener_metadata_pelicula(tmdb, nombre_pelicula, carpetas_imagenes, archivo_
 
             def calcular_similitud(titulo_archivo, titulo_pelicula):
                 return fuzz.ratio(titulo_archivo.lower(), titulo_pelicula.lower()) / 100
+
             candidatos_validos = []
 
             for resultado in todos_resultados:
-                tmdb.language = config['metadata_language'][0]
-                pelicula_detalle = tmdb.movie(resultado.id).details()
+                try:
 
-                if hasattr(pelicula_detalle, 'runtime') and pelicula_detalle.runtime and pelicula_detalle.runtime < 60:
-                    logging.warning(f"Descartando película {resultado.title} (ID: {resultado.id}) por duración insuficiente: {pelicula_detalle.runtime} minutos")
+                    tmdb.language = config['metadata_language'][0]
+                    pelicula_detalle = tmdb.movie(resultado.id).details()
+
+                    if hasattr(pelicula_detalle, 'runtime') and pelicula_detalle.runtime and pelicula_detalle.runtime < 60:
+                        logging.warning(f"Descartando película {resultado.title} (ID: {resultado.id}) por duración insuficiente: {pelicula_detalle.runtime} minutos")
+                        continue
+
+                    año_resultado = None
+                    if hasattr(resultado, 'release_date') and resultado.release_date:
+                        año_resultado = str(resultado.release_date.year)
+
+                    candidato = {
+                        'resultado': resultado,
+                        'año': año_resultado,
+                        'duracion': pelicula_detalle.runtime if hasattr(pelicula_detalle, 'runtime') else None
+                    }
+                    candidatos_validos.append(candidato)
+                except Exception as e:
+                    logging.warning(f"Error al obtener detalles para película ID {resultado.id}: {str(e)}")
                     continue
-
-                año_resultado = None
-                if hasattr(resultado, 'release_date') and resultado.release_date:
-                    año_resultado = str(resultado.release_date.year)
-
-                candidato = {
-                    'resultado': resultado,
-                    'año': año_resultado,
-                    'duracion': pelicula_detalle.runtime if hasattr(pelicula_detalle, 'runtime') else None
-                }
-                candidatos_validos.append(candidato)
 
             if not candidatos_validos:
                 logging.warning(f"No se encontraron candidatos válidos después del filtro de duración para: {nombre_pelicula} (Archivo: {archivo_video.name})")
@@ -511,26 +523,43 @@ def obtener_metadata_pelicula(tmdb, nombre_pelicula, carpetas_imagenes, archivo_
                 logging.warning(f"No se encontró un resultado adecuado para: {nombre_pelicula} (Archivo: {archivo_video.name})")
                 return None
 
-            metadata_final = None
+            pelicula_id = mejor_resultado.id
+            clasificacion = obtener_clasificacion_mpa(tmdb, pelicula_id)
+
+            duracion_tmdb = None
+            for idioma_metadata in config['metadata_language']:
+                try:
+                    tmdb.language = idioma_metadata
+                    pelicula_temp = tmdb.movie(pelicula_id).details()
+                    if hasattr(pelicula_temp, 'runtime') and pelicula_temp.runtime:
+                        duracion_tmdb = pelicula_temp.runtime
+                        break
+                except Exception as e:
+                    logging.debug(f"No se pudo obtener duración en {idioma_metadata}: {str(e)}")
+                    continue
+
+            if not duracion_tmdb:
+                duracion_tmdb = obtener_duracion_con_ffprobe(archivo_video)
+
             mejor_tagline = None
             mejor_descripcion = None
 
             for idioma_metadata in config['metadata_language']:
-                tmdb.language = idioma_metadata
-                pelicula_id = mejor_resultado.id
-                pelicula = tmdb.movie(pelicula_id).details(append_to_response="credits,images,videos")
-                imagenes = tmdb.movie(pelicula_id).images()
-                descripcion_actual = pelicula.overview if hasattr(pelicula, 'overview') else ""
-                tagline_actual = pelicula.tagline if hasattr(pelicula, 'tagline') else ""
+                try:
+                    tmdb.language = idioma_metadata
+                    pelicula = tmdb.movie(pelicula_id).details(append_to_response="credits,images,videos")
 
-                if descripcion_actual and not mejor_descripcion:
-                    mejor_descripcion = descripcion_actual
+                    if not mejor_descripcion and hasattr(pelicula, 'overview') and pelicula.overview:
+                        mejor_descripcion = pelicula.overview
 
-                if tagline_actual and not mejor_tagline:
-                    mejor_tagline = tagline_actual
+                    if not mejor_tagline and hasattr(pelicula, 'tagline') and pelicula.tagline:
+                        mejor_tagline = pelicula.tagline
 
-                if mejor_descripcion and mejor_tagline:
-                    break
+                    if mejor_descripcion and mejor_tagline:
+                        break
+                except Exception as e:
+                    logging.debug(f"No se pudo obtener metadata en {idioma_metadata}: {str(e)}")
+                    continue
 
             if not mejor_descripcion:
                 tmdb.language = config['metadata_language'][0]
@@ -587,19 +616,13 @@ def obtener_metadata_pelicula(tmdb, nombre_pelicula, carpetas_imagenes, archivo_
                 else:
                     logging.warning(f"No se encontró logo para la película: {nombre_pelicula} (Archivo: {archivo_video.name})")
 
+            # Descargar tráiler
             if not video_local and config['obtener_datos']['trailer']:
                 video_path = carpetas_imagenes['video'] / nombre_base
                 if descargar_trailer(tmdb, pelicula_id, video_path, config['calidad_trailer']):
                     video_local = str(video_path) + ".mp4"
                 else:
                     logging.warning(f"No se pudo descargar el tráiler para la película: {nombre_pelicula} (Archivo: {archivo_video.name})")
-
-            duracion_tmdb = pelicula.runtime if pelicula.runtime else None
-
-            if not duracion_tmdb:
-                duracion_tmdb = obtener_duracion_con_ffprobe(archivo_video)
-
-            clasificacion = obtener_clasificacion_mpa(tmdb, pelicula_id)
 
             metadata_final = {
                 'titulo': archivo_video.stem,
@@ -621,7 +644,7 @@ def obtener_metadata_pelicula(tmdb, nombre_pelicula, carpetas_imagenes, archivo_
                 'idioma_metadata': ", ".join(config['metadata_language']),
                 'x-added-date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 'x-Duration': duracion_tmdb,
-                'x-tagline': mejor_tagline,
+                'x-tagline': mejor_tagline if mejor_tagline else "",
                 'x-classification': clasificacion if clasificacion else "Desconocido",
                 'x-codec': info_tecnica['x-codec'],
                 'x-resolution': info_tecnica['x-resolution'],
@@ -1141,7 +1164,7 @@ def main():
         return
 
     carpetas_imagenes = crear_carpetas_imagenes(config['ruta_peliculas'])
-    tmdb = TMDb(key=config['api_key'], language=config['metadata_language'])
+    tmdb = TMDb(key=config['api_key'], language=config['metadata_language'][0])
 
     ruta_metadata = Path(config['ruta_peliculas']) / f"metadata.{config['exportar_formato']}"
     metadata_existente = cargar_metadata_existente(ruta_metadata)
@@ -1151,84 +1174,146 @@ def main():
         if pelicula:
             actualizar_pelicula_manual(tmdb, pelicula, carpetas_imagenes, ruta_metadata)
         return
-    else:
 
-        logging.info(get_translation("processing_files", config['interface_language']).format(len(archivos)))
-        resultados_queue = queue.Queue()
+    logging.info(get_translation("processing_files", config['interface_language']).format(len(archivos)))
+    resultados_queue = queue.Queue()
 
-        def procesar_archivo(archivo):
-            if metadata_existente and archivo_tiene_metadata(archivo, metadata_existente):
-                logging.info(f"El archivo {archivo.name} ya tiene metadata. Saltando...")
-                resultados["estadisticas"]["total_procesadas"] += 1
-                return
+    def procesar_archivo(archivo):
+        nonlocal resultados
+        stats = {
+            'boxfront': False,
+            'screenshot': False,
+            'wheel': False,
+            'trailer': False
+        }
 
-            imagenes_existentes = archivo_tiene_imagenes(archivo, carpetas_imagenes)
-
-            nombre_pelicula = extraer_nombre_pelicula(archivo.name)
-            metadata = obtener_metadata_pelicula(tmdb, nombre_pelicula, carpetas_imagenes, archivo, config, imagenes_existentes)
-
+        if metadata_existente and archivo_tiene_metadata(archivo, metadata_existente):
+            logging.info(f"El archivo {archivo.name} ya tiene metadata. Saltando...")
             resultados["estadisticas"]["total_procesadas"] += 1
+            return
 
-            if metadata:
-                resultados["estadisticas"]["encontradas"] += 1
-                if metadata['boxfront_local'] and metadata['boxfront_local'] not in imagenes_existentes.values():
-                    resultados["estadisticas"]["imagenes_descargadas"]["boxfront"] += 1
-                if metadata['screenshot_local'] and metadata['screenshot_local'] not in imagenes_existentes.values():
-                    resultados["estadisticas"]["imagenes_descargadas"]["screenshot"] += 1
-                if metadata['wheel_local'] and metadata['wheel_local'] not in imagenes_existentes.values():
-                    resultados["estadisticas"]["imagenes_descargadas"]["wheel"] += 1
-                if metadata.get('video_local') and metadata['video_local'] not in imagenes_existentes.values():
-                    resultados["estadisticas"]["trailers_descargados"] += 1
-            else:
-                resultados["estadisticas"]["no_encontradas"] += 1
-                resultados["errores"].append(f"No se encontró información para: {nombre_pelicula}")
-                logging.warning(f"No se encontró información para: {nombre_pelicula} (Archivo: {archivo.name})")
+        imagenes_existentes = archivo_tiene_imagenes(archivo, carpetas_imagenes)
+        nombre_pelicula = extraer_nombre_pelicula(archivo.name)
+        metadata = obtener_metadata_pelicula(tmdb, nombre_pelicula, carpetas_imagenes, archivo, config, imagenes_existentes)
 
-            resultados_queue.put({
-                "tipo": "pelicula",
-                "archivo_original": str(archivo),
-                "nombre_extraido": nombre_pelicula,
-                "metadata": metadata
-            })
+        resultados["estadisticas"]["total_procesadas"] += 1
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-            futures = [executor.submit(procesar_archivo, archivo) for archivo in archivos]
+        if metadata:
+            resultados["estadisticas"]["encontradas"] += 1
 
-            with tqdm(total=len(archivos), desc=get_translation("progress", config['interface_language']), unit=get_translation("progress_file", config['interface_language'])) as pbar:
-                for future in concurrent.futures.as_completed(futures):
-                    try:
-                        future.result()
-                    except Exception as e:
-                        logging.error(f"Error al procesar archivo: {e}")
-                    finally:
-                        pbar.update(1)
+            if metadata.get('boxfront_local') and not imagenes_existentes.get('boxfront'):
+                stats['boxfront'] = True
+            if metadata.get('screenshot_local') and not imagenes_existentes.get('screenshot'):
+                stats['screenshot'] = True
+            if metadata.get('wheel_local') and not imagenes_existentes.get('wheel'):
+                stats['wheel'] = True
+            if metadata.get('video_local') and not imagenes_existentes.get('video'):
+                stats['trailer'] = True
+        else:
+            resultados["estadisticas"]["no_encontradas"] += 1
+            resultados["errores"].append(f"No se encontró información para: {nombre_pelicula}")
+            logging.warning(f"No se encontró información para: {nombre_pelicula} (Archivo: {archivo.name})")
 
-        while not resultados_queue.empty():
-            resultados["metadata"].append(resultados_queue.get())
+        if stats['boxfront']:
+            resultados["estadisticas"]["imagenes_descargadas"]["boxfront"] += 1
+        if stats['screenshot']:
+            resultados["estadisticas"]["imagenes_descargadas"]["screenshot"] += 1
+        if stats['wheel']:
+            resultados["estadisticas"]["imagenes_descargadas"]["wheel"] += 1
+        if stats['trailer']:
+            resultados["estadisticas"]["trailers_descargados"] += 1
 
-        actualizar_metadata(resultados, ruta_metadata)
+        resultados_queue.put({
+            "tipo": "pelicula",
+            "archivo_original": str(archivo),
+            "nombre_extraido": nombre_pelicula,
+            "metadata": metadata,
+            "descargas": stats
+        })
 
-        print(f"\n{get_translation('operation_summary', config['interface_language'])}")
-        print(f"{get_translation('file_generated', config['interface_language'])} {ruta_metadata}")
-        print(f"{get_translation('total_files_processed', config['interface_language'])} {resultados['estadisticas']['total_procesadas']}")
-        print(f"{get_translation('movies_found', config['interface_language'])} {resultados['estadisticas']['encontradas']}")
-        print(f"{get_translation('movies_not_found', config['interface_language'])} {resultados['estadisticas']['no_encontradas']}")
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        futures = [executor.submit(procesar_archivo, archivo) for archivo in archivos]
+
+        with tqdm(total=len(archivos), desc=get_translation("progress", config['interface_language']),
+              unit=get_translation("progress_file", config['interface_language'])) as pbar:
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    logging.error(f"Error al procesar archivo: {e}")
+                finally:
+                    pbar.update(1)
+
+    while not resultados_queue.empty():
+        item = resultados_queue.get()
+        resultados["metadata"].append(item)
+
+    total_descargas = (
+        resultados["estadisticas"]["imagenes_descargadas"]["boxfront"] +
+        resultados["estadisticas"]["imagenes_descargadas"]["screenshot"] +
+        resultados["estadisticas"]["imagenes_descargadas"]["wheel"] +
+        resultados["estadisticas"]["trailers_descargados"]
+    )
+
+    if total_descargas == 0:
+        for item in resultados["metadata"]:
+            if item.get("metadata"):
+                metadata = item["metadata"]
+                if metadata.get("boxfront_local") or metadata.get("screenshot_local") or \
+                   metadata.get("wheel_local") or metadata.get("video_local"):
+                    logging.warning("Se detectaron archivos locales pero no se registraron como descargas")
+                    # Recontar manualmente si es necesario
+                    if metadata.get("boxfront_local"):
+                        resultados["estadisticas"]["imagenes_descargadas"]["boxfront"] += 1
+                    if metadata.get("screenshot_local"):
+                        resultados["estadisticas"]["imagenes_descargadas"]["screenshot"] += 1
+                    if metadata.get("wheel_local"):
+                        resultados["estadisticas"]["imagenes_descargadas"]["wheel"] += 1
+                    if metadata.get("video_local"):
+                        resultados["estadisticas"]["trailers_descargados"] += 1
+
+    actualizar_metadata(resultados, ruta_metadata)
+
+    print(f"\n{get_translation('operation_summary', config['interface_language'])}")
+    print(f"{get_translation('file_generated', config['interface_language'])} {ruta_metadata}")
+    print(f"{get_translation('total_files_processed', config['interface_language'])} {resultados['estadisticas']['total_procesadas']}")
+    print(f"{get_translation('movies_found', config['interface_language'])} {resultados['estadisticas']['encontradas']}")
+    print(f"{get_translation('movies_not_found', config['interface_language'])} {resultados['estadisticas']['no_encontradas']}")
+
+    if (resultados["estadisticas"]["imagenes_descargadas"]["boxfront"] > 0 or
+        resultados["estadisticas"]["imagenes_descargadas"]["screenshot"] > 0 or
+        resultados["estadisticas"]["imagenes_descargadas"]["wheel"] > 0 or
+        resultados["estadisticas"]["trailers_descargados"] > 0):
+
         print(f"\n{get_translation('images_downloaded', config['interface_language'])}")
-        print(f"{get_translation('posters', config['interface_language'])} {resultados['estadisticas']['imagenes_descargadas']['boxfront']}")
-        print(f"{get_translation('screenshots', config['interface_language'])} {resultados['estadisticas']['imagenes_descargadas']['screenshot']}")
-        print(f"{get_translation('logos', config['interface_language'])} {resultados['estadisticas']['imagenes_descargadas']['wheel']}")
-        print(f"{get_translation('trailers', config['interface_language'])} {resultados['estadisticas']['trailers_descargados']}")
+        if resultados["estadisticas"]["imagenes_descargadas"]["boxfront"] > 0:
+            print(f"{get_translation('posters', config['interface_language'])} {resultados['estadisticas']['imagenes_descargadas']['boxfront']}")
+        if resultados["estadisticas"]["imagenes_descargadas"]["screenshot"] > 0:
+            print(f"{get_translation('screenshots', config['interface_language'])} {resultados['estadisticas']['imagenes_descargadas']['screenshot']}")
+        if resultados["estadisticas"]["imagenes_descargadas"]["wheel"] > 0:
+            print(f"{get_translation('logos', config['interface_language'])} {resultados['estadisticas']['imagenes_descargadas']['wheel']}")
+        if resultados["estadisticas"]["trailers_descargados"] > 0:
+            print(f"{get_translation('trailers', config['interface_language'])} {resultados['estadisticas']['trailers_descargados']}")
+    else:
+        print("\nNo se descargaron nuevos assets (las imágenes/tráilers ya existían)")
 
-        logging.info("=== Resumen de la operación ===")
-        logging.info(f"Archivo generado: {ruta_metadata}")
-        logging.info(f"Total de archivos procesados: {resultados['estadisticas']['total_procesadas']}")
-        logging.info(f"Películas encontradas: {resultados['estadisticas']['encontradas']}")
-        logging.info(f"Películas no encontradas: {resultados['estadisticas']['no_encontradas']}")
-        logging.info("Imágenes descargadas:")
-        logging.info(f"- Posters (boxfront): {resultados['estadisticas']['imagenes_descargadas']['boxfront']}")
-        logging.info(f"- Capturas (screenshot): {resultados['estadisticas']['imagenes_descargadas']['screenshot']}")
-        logging.info(f"- Logos (wheel): {resultados['estadisticas']['imagenes_descargadas']['wheel']}")
-        logging.info(f"- Tráilers descargados: {resultados['estadisticas']['trailers_descargados']}")
+    logging.info("=== Resumen detallado ===")
+    logging.info(f"Archivo generado: {ruta_metadata}")
+    logging.info(f"Total de archivos procesados: {resultados['estadisticas']['total_procesadas']}")
+    logging.info(f"Películas encontradas: {resultados['estadisticas']['encontradas']}")
+    logging.info(f"Películas no encontradas: {resultados['estadisticas']['no_encontradas']}")
 
+    for item in resultados["metadata"]:
+        if item.get("metadata"):
+            metadata = item["metadata"]
+            logging.info(f"\nPelícula: {metadata.get('titulo_tmdb', 'Desconocido')}")
+            if metadata.get("boxfront_local"):
+                logging.info(f"- Poster descargado: {metadata['boxfront_local']}")
+            if metadata.get("screenshot_local"):
+                logging.info(f"- Screenshot descargado: {metadata['screenshot_local']}")
+            if metadata.get("wheel_local"):
+                logging.info(f"- Logo descargado: {metadata['wheel_local']}")
+            if metadata.get("video_local"):
+                logging.info(f"- Tráiler descargado: {metadata['video_local']}")
 if __name__ == "__main__":
     main()
