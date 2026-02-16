@@ -1,8 +1,8 @@
 # PMDB-Scraper
 
-## ✨ Scraper de Metadatos de Películas para Pegasus Frontend
+## ✨ Movie Metadata Scraper for Pegasus Frontend
 
-Pegasus Movie Data Base Scraper (PMDB-Scraper) es una herramienta diseñada para extraer metadatos de películas desde **The Movie Database (TMDB)** y generar archivos de metadatos compatibles con **Pegasus Frontend**. (Esta herramienta no tiene ninguna asociación oficial con Pegasus Frontend. Es un proyecto comunitario diseñado para ayudar a quienes desean integrar su colección de películas en su sistema de juego.)
+Pegasus Movie Data Base Scraper (PMDB-Scraper) is a tool designed to extract movie metadata from **The Movie Database (TMDB)** and generate metadata files compatible with **Pegasus Frontend**. (This tool has no official association with Pegasus Frontend. It is a community project created to help users integrate their movie collections into their gaming systems.)
 
 ---
 
@@ -11,85 +11,99 @@ Pegasus Movie Data Base Scraper (PMDB-Scraper) es una herramienta diseñada para
 ![screen2](https://github.com/ZagonAb/PMDB-Scraper/blob/98e992cf3b4fc97f58b3a31d618951a404c8a30b/.screenshot/screen2.png)
 
 ---
-## ⚠️ Aviso
-Esta herramienta utiliza la API de [TMDb](https://www.themoviedb.org/) (The Movie Database) pero **no está respaldado ni certificado** por TMDb. Los datos de películas se proporcionan bajo los [Términos de Uso de TMDb](https://www.themoviedb.org/documentation/api/terms-of-use).
- 
+
+## ⚠️ Notice
+
+This tool uses the API from [TMDb](https://www.themoviedb.org/) (The Movie Database) but is **not endorsed or certified** by TMDb. Movie data is provided under the [TMDb Terms of Use](https://www.themoviedb.org/documentation/api/terms-of-use).
+
 [<img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_2-d537fb228cf3ded904ef09b136fe3fec72548ebc1fea3fbbd1ad9e36364db38b.svg" width="100" alt="TMDb Logo">](https://www.themoviedb.org/)
----
-
-## ⚡ Características
-- 🌍 Soporte de idiomas, español e inglés para el script desde `config.json`
-- ✅ Obtiene metadatos de películas desde **TMDB** (título, director, género, sinopsis, etc.).
-- 🏷️ Descarga imágenes como posters, screenshots y logos.
-- 🎥 Descarga tráilers en distintos idiomas y resoluciones.
-- 📊 Exporta los datos en **JSON** y los convierte en **TXT** (compatible con Pegasus Frontend).
-- 🚀 Búsqueda en múltiples idiomas configurables.
-- 🚫 Opción de ejecución manual (requiere de metadata.json previamente generado.)
-- ⏳ Reintentos automáticos para descargas fallidas.
 
 ---
 
-## 🛠️ Instalación y Requisitos
+## ⚡ Features
 
-### 1. Clonar el repositorio
+* 🌍 Language support (Spanish and English) configurable via `config.json`
+* ✅ Fetches movie metadata from **TMDB** (title, director, genre, synopsis, etc.)
+* 🏷️ Downloads images such as posters, screenshots, and logos
+* 🎥 Downloads trailers in multiple languages and resolutions
+* 📊 Exports data in **JSON** and converts it into **TXT** (Pegasus Frontend compatible)
+* 🚀 Multi-language configurable search
+* 🚫 Manual execution mode (requires a previously generated `metadata.json`)
+* ⏳ Automatic retries for failed downloads
+
+---
+
+## 🛠️ Installation and Requirements
+
+### 1. Clone the repository
 
 ```sh
 git clone git@github.com:ZagonAb/PMDB-Scraper.git
 cd PMDB-Scraper
 ```
 
-### 2. Requisitos previos
+### 2. Prerequisites
 
-#### FFmpeg (Requerido en todos los sistemas)
-FFmpeg es necesario para extraer información técnica de los archivos de video.
+#### FFmpeg (Required on all systems)
 
-##### Instalación en Linux:
+FFmpeg is required to extract technical information from video files.
+
+##### Installation on Linux:
+
 ```bash
 sudo apt-get update && sudo apt-get install ffmpeg
 ```
 
-##### Instalación en Windows:
-1. Descarga FFmpeg desde [ffmpeg.org](https://ffmpeg.org/download.html)
-2. Extrae el archivo ZIP
-3. Copia la ruta de la carpeta `bin` (ejemplo: `C:\ffmpeg\bin`)
-4. Agrega la ruta a las variables de entorno PATH:
-   - Busca "Variables de entorno" en el menú de Windows
-   - Edita las variables del sistema
-   - Selecciona "PATH" y haz clic en "Editar"
-   - Agrega la ruta a la carpeta `bin` de FFmpeg
-5. Verifica la instalación abriendo PowerShell y ejecutando:
+##### Installation on Windows:
+
+1. Download FFmpeg from [ffmpeg.org](https://ffmpeg.org/download.html)
+2. Extract the ZIP file
+3. Copy the path to the `bin` folder (example: `C:\ffmpeg\bin`)
+4. Add the path to the system PATH environment variables:
+
+   * Search for "Environment Variables" in the Windows menu
+   * Edit system variables
+   * Select "PATH" and click "Edit"
+   * Add the FFmpeg `bin` folder path
+5. Verify installation by opening PowerShell and running:
+
    ```
    ffmpeg -version
    ```
 
-### 3. Dependencias de Python
+### 3. Python Dependencies
 
-#### En Linux:
-1. Crea y activa un entorno virtual (recomendado):
+#### On Linux:
+
+1. Create and activate a virtual environment (recommended):
+
    ```bash
    python3 -m venv venv
    source venv/bin/activate
    ```
-2. Instala las dependencias:
+2. Install dependencies:
+
    ```bash
    pip install -r requirements.txt
    ```
 
-#### En Windows:
-**Puede omitir la creación de un entorno virtual e instalar directamente las dependencias necesarias.**
-   ```bash
-   pip install -r requirements.txt
-   ```
+#### On Windows:
 
-### 4. Configuración API de TMDB
+**You may skip creating a virtual environment and install dependencies directly.**
 
-Para utilizar PMDB-Scraper, necesitas una clave API de **The Movie Database (TMDB)**:
+```bash
+pip install -r requirements.txt
+```
 
-1. Crea una cuenta en [TMDB](https://www.themoviedb.org/)
-2. Accede a tu perfil y ve a la sección **Configuración > API**
-3. Crea una nueva clave API y cópiala en el archivo `config.json` bajo la clave `"api_key"`
+### 4. TMDB API Configuration
 
-### 5. Ejecutar el script
+To use PMDB-Scraper, you need an API key from **The Movie Database (TMDB)**:
+
+1. Create an account at [TMDB](https://www.themoviedb.org/)
+2. Go to **Settings > API** in your profile
+3. Create a new API key and copy it into `config.json` under `"api_key"`
+
+### 5. Run the script
 
 ```bash
 python pmdb-scraper.py
@@ -97,27 +111,31 @@ python pmdb-scraper.py
 
 ---
 
-## 📂 Configuración (`config.json`)
+## 📂 Configuration (`config.json`)
 
-Antes de ejecutar el scraper, configura el archivo `config.json` con los siguientes parámetros:
+Before running the scraper, configure the `config.json` file with the following parameters:
 
-- **`api_key`**: Clave API de TMDB (requerida)
-- **`ruta_peliculas`**: Ruta absoluta a la carpeta con archivos de video (ej: `/ruta/a/peliculas`)
-- **`idiomas`**: Lista de idiomas para búsqueda (orden priorizado). Ej: `["es-ES", "es-MX", "en-US"]`
-- **`metadata_language`**: Idiomas para metadatos (orden priorizado)
-- **`obtener_datos`**: Campos booleanos para activar/desactivar tipos de metadatos
-- **`calidad_trailer`**: Calidad del tráiler (`480p`, `720p` etc.)
-- **`timeout_descargas`**: Tiempo máximo (segundos) para descargas
-- **`max_reintentos`**: Número máximo de intentos si una descarga falla (ej: `3`)
-- **`actualizar_manual`**: Para actualizar manualmente películas con metadatos erróneos o faltantes
+* **`api_key`**: TMDB API key (required)
+* **`ruta_peliculas`**: Absolute path to the movie folder (e.g. `/path/to/movies`)
+* **`idiomas`**: Search language list (priority order). Example: `["es-ES", "es-MX", "en-US"]`
+* **`metadata_language`**: Metadata language (priority order)
+* **`obtener_datos`**: Boolean fields to enable/disable metadata types
+* **`calidad_trailer`**: Trailer quality (`480p`, `720p`, etc.)
+* **`timeout_descargas`**: Maximum download time (seconds)
+* **`max_reintentos`**: Maximum retry attempts if a download fails (e.g. `3`)
+* **`actualizar_manual`**: Manually update movies with incorrect or missing metadata
 
-**Notas sobre la configuración de idiomas:**
-- Para el `trailer_lenguaje`, si el tráiler no está disponible en el idioma principal, buscará automáticamente en los siguientes idiomas listados
-  - Ejemplo: `"trailer_lenguaje": ["es-MX", "en-US"]`
-- En `idiomas`, configure según el idioma de sus títulos de películas
-  - Ejemplo: `"idiomas": ["es-MX", "es-ES", "en-US"]` si tiene mezcla de títulos en español e inglés
+**Language configuration notes:**
 
-**Ejemplo de configuración:**
+* For `trailer_lenguaje`, if the trailer is not available in the primary language, it will automatically search the next listed languages.
+
+  * Example: `"trailer_lenguaje": ["es-MX", "en-US"]`
+* In `idiomas`, configure according to the language of your movie titles.
+
+  * Example: `"idiomas": ["es-MX", "es-ES", "en-US"]` if you have mixed Spanish and English titles
+
+**Configuration example:**
+
 ```json
 {
     "api_key": "YOUR_TMDB_API_KEY",
@@ -152,81 +170,89 @@ Antes de ejecutar el scraper, configura el archivo `config.json` con los siguien
 
 ---
 
-## 📝 Consejos para mejor funcionamiento
+## 📝 Tips for Best Results
 
-- **Formato de nombres de archivos**: El script extrae el año incluido en los títulos de los archivos para mejorar la precisión de búsqueda. Se recomienda usar estos formatos:
-  - `Die Hard (1988)` (Título original + año)
-  - `Duro de matar (1988)` (Título traducido oficialmente + año)
+* **File naming format**: The script extracts the year included in filenames to improve search accuracy. Recommended formats:
 
-- **⚠️ Razones por las que TMDB podría no encontrar algunos títulos:**
-  - Errores ortográficos o de formato en el nombre del archivo
-  - Títulos en diferentes idiomas (intente usar el título original)
-  - Contenido no disponible en la base de datos de TMDB
-  - Problemas con la API o limitaciones en la búsqueda
-  - Restricciones regionales por licencias o derechos de distribución
+  * `Die Hard (1988)` (Original title + year)
+  * `Duro de matar (1988)` (Official translated title + year)
 
-- **⚠️ Limitaciones en la descarga de tráilers:**
-  - Videos no disponibles en su país (bloqueo geográfico)
-  - Videos eliminados por el propietario o por incumplimiento de políticas
-  - Restricciones de edad que requieren inicio de sesión
-  - Bloqueos por derechos de autor
+* **⚠️ Reasons why TMDB may not find some titles:**
 
-  El script omitirá los tráilers con problemas y continuará con el resto de metadatos.
+  * Spelling or formatting errors in filenames
+  * Titles in different languages (try the original title)
+  * Content not available in TMDB’s database
+  * API issues or search limitations
+  * Regional restrictions due to licensing or distribution rights
+
+* **⚠️ Trailer download limitations:**
+
+  * Videos unavailable in your country (geo-blocking)
+  * Videos removed by the owner or policy violations
+  * Age restrictions requiring login
+  * Copyright restrictions
+
+The script will skip problematic trailers and continue processing the remaining metadata.
 
 ---
 
-## 📂 Estructura de directorios creada
+## 📂 Generated Directory Structure
 
-Al ejecutar PMDB-Scraper, se generará la siguiente estructura dentro de la carpeta de películas:
+When running PMDB-Scraper, the following structure will be created inside the movie folder:
 
 ```
 /media
- ├── boxFront/   (Posters de películas)
- ├── screenshot/ (Capturas de pantalla)
- ├── wheel/      (Logos de películas)
- ├── video/      (Tráilers descargados)
+ ├── boxFront/   (Movie posters)
+ ├── screenshot/ (Screenshots)
+ ├── wheel/      (Movie logos)
+ ├── video/      (Downloaded trailers)
 ```
 
 ---
 
-## 🎯 Ejemplo de salida
+## 🎯 Output Example
 
 ```sh
-=== Resumen de la Operación ===
-Archivo generado: metadata.json
-Total de archivos procesados: 10
-Películas encontradas: 8
-Películas no encontradas: 2
+=== Operation Summary ===
+Generated file: metadata.json
+Total files processed: 10
+Movies found: 8
+Movies not found: 2
 
-=== Imágenes Descargadas ===
+=== Downloaded Images ===
 - Posters: 8
 - Screenshots: 7
 - Logos: 5
-- Tráilers descargados: 6
+- Downloaded trailers: 6
 ```
 
-## 📄 Generación de archivos
+---
 
-El script genera un archivo `metadata.json` con toda la información recopilada, que es necesario para:
+## 📄 File Generation
 
-1. Exportar los datos a Pegasus Frontend
-2. Utilizar la función `actualizar_manual` en futuras ejecuciones
-3. Si desea modificar el archivo `metadata.txt`, se recomienda realizar los mismos cambios en el archivo `metadata.json` para mantener la consistencia en futuras extracciones
+The script generates a `metadata.json` file containing all collected information, which is required for:
+
+1. Exporting data to Pegasus Frontend
+2. Using the `actualizar_manual` feature in future runs
+3. If you modify `metadata.txt`, it is recommended to apply the same changes to `metadata.json` to maintain consistency in future extractions
 
 ---
 
-## [(PMDB-Theme)](https://github.com/ZagonAb/PMDB-Theme) 
-Interfaz diseñada específicamente para resaltar estos metadatos.
+## [(PMDB-Theme)](https://github.com/ZagonAb/PMDB-Theme)
+
+Interface specifically designed to highlight this metadata.
 
 ---
 
-## ⚖️ Licencia
+## ⚖️ License
 
-Este proyecto está bajo la [GNU Affero General Public License v3.0](https://www.gnu.org/licenses/agpl-3.0.html).
+This project is licensed under the [GNU Affero General Public License v3.0](https://www.gnu.org/licenses/agpl-3.0.html).
 
-## ✨ Contribuciones
+---
 
-¡Las contribuciones son bienvenidas! Si deseas mejorar o tienes algún problema con **PMDB-Scraper**, abre un **`issue`**.
+## ✨ Contributions
+
+Contributions are welcome! If you want to improve or encounter any issues with **PMDB-Scraper**, please open an **`issue`**.
 
 ---
 
